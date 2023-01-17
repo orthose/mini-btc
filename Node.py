@@ -46,15 +46,25 @@ class Node:
             threading.Thread(target=self._exec_req, args=(sock,)).start()
 
     def _exec_req(self, sock: socket.socket):
-        req = recv(sock) # Réception de la requête
+        # Réception de la requête
+        req = recv(sock)
         sock.close()
         self.logging(req)
 
         # Demande de connexion au réseau
         if "CONNECT" == req["header"]:
-            # Le format JSON ne connaît que les listes par les ensembles
+            # Le format JSON ne connaît que les listes pas les ensembles
             obj = {"header": "CONNECT_ACCEPTED", "nodes": list(self.nodes)}
             send(req["host"], req["port"], obj)
+
+            # Notification du nouvel arrivant à tous les noeuds voisins
+            # Attention: Ce n'est pas un broadcast !
+            obj["nodes"] = [(req["host"], req["port"])]
+            for host, port in self.nodes:
+                send(host, port, obj)
+
+            # Enregistrement du nouvel arrivant si le nombre de connexions
+            # actives n'est pas dépassé
             if len(self.nodes) < self.num_nodes:
                 self.nodes.add((req["host"], req["port"]))
 
