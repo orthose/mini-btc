@@ -1,11 +1,12 @@
 import socket, threading
-from utils import create_sock, pipe_sock, logging
+from utils import send, recv, logging
 from typing import Union
 
 
 class Node:
     """
     Noeud du réseau pair à pair agissant à la fois comme un client et un serveur.
+    Les communications utilisent des sockets temporaires unidirectionnels.
     """
     def __init__(self, listen_host: str, listen_port: int,
         remote_host: str = None, remote_port: int = None, num_nodes: int = 10,
@@ -45,22 +46,24 @@ class Node:
             threading.Thread(target=self._exec_req, args=(sock,)).start()
 
     def _exec_req(self, sock: socket.socket):
-        send, recv = pipe_sock(sock)
-        req = recv() # Réception de la requête
+        req = recv(sock) # Réception de la requête
+        sock.close()
         self.logging(req)
 
         # Demande de connexion au réseau
-        if "CONNECT_1" == req["header"]:
-            obj = {"header": "CONNECT_2", "nodes": list(self.nodes)}
-            send(obj)
+        if "CONNECT" == req["header"]:
+            # Le format JSON ne connaît que les listes par les ensembles
+            obj = {"header": "CONNECT_ACCEPTED", "nodes": list(self.nodes)}
+            send(req["host"], req["port"], obj)
             if len(self.nodes) < self.num_nodes:
                 self.nodes.add((req["host"], req["port"]))
 
         # Réception d'une liste de noeuds
-        elif "CONNECT_2" == req["header"]:
-            pass
-
-        sock.close()
+        elif "CONNECT_ACCEPTED" == req["header"]:
+            nodes = set([tuple(node) for node in req["nodes"]])
+            while len(self.nodes) < self.num_nodes and len(nodes) > 0:
+                self.nodes.add(nodes.pop())
+            self.logging(self.nodes)
 
     def logging(self, msg: Union[str, object]):
         """
@@ -74,20 +77,13 @@ class Node:
         """
         Démarre le noeud en le connectant au réseau.
         """
-        # Récupération de la liste des voisins
-        for host, port in self.nodes:
-            sock = create_sock(host, port)
-            msg = {"header": "CONNECT_1", "host": self.host, "port": self.port}
-            send, recv = pipe_sock(sock)
-            send(msg)
-            resp = recv()
-            assert "CONNECT_2" == resp["header"]
-            nodes = [(host, port) for host, port in resp["nodes"][0:self.num_nodes-1]]
-            self.nodes = self.nodes.union(set(nodes))
-            self.logging(self.nodes)
-
         # Attente de connexions
         threading.Thread(target=self._wait).start()
+
+        # Récupération de la liste des noeuds voisins
+        for host, port in self.nodes:
+            obj = {"header": "CONNECT", "host": self.host, "port": self.port}
+            send(host, port, obj)
 
     def broadcast(self, msg: str):
         pass

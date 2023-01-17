@@ -17,7 +17,7 @@ def create_sock(host: str, port: int) -> socket.socket:
     return sock
 
 
-def pipe_sock(sock: socket.socket) -> Tuple[Callable[[object], bytes], Callable[[int], object]]:
+def pipe_sock(sock: socket.socket) -> Tuple[Callable[[object], None], Callable[[int], object]]:
     """
     Permet d'échanger des objets entre noeuds au travers d'une prise.
 
@@ -28,8 +28,30 @@ def pipe_sock(sock: socket.socket) -> Tuple[Callable[[object], bytes], Callable[
     recv = lambda bufsize=1024: json.loads(sock.recv(bufsize).decode('utf-8'))
     return send, recv
 
+def send(host: str, port: int, obj: object) -> None:
+    """
+    Permet d'envoyer un objet à un noeud au travers d'une prise temporaire.
 
-def logging(msg: Union[str, object]):
+    :param host: Adresse du noeud.
+    :param port: Port associé à cette adresse.
+    :param obj: Objet Python sérialisable en JSON.
+    """
+    sock = create_sock(host, port)
+    sock.send(json.dumps(obj).encode('utf-8'))
+    sock.close()
+
+def recv(sock: socket.socket, bufsize: int = 1024) -> object:
+    """
+    Permet de recevoir un objet envoyé par un noeud.
+    L'objet envoyé doit être un JSON sérialisé.
+
+    :param sock: Prise connectée à un noeud.
+    :param bufsize: Nombre d'octets attendus.
+    :return: Objet Python.
+    """
+    return json.loads(sock.recv(bufsize).decode('utf-8'))
+
+def logging(msg: Union[str, object]) -> None:
     """
     Affichage dans la sortie standard d'un message précédé par sa date d'émission.
 

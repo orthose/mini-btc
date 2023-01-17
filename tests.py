@@ -1,4 +1,5 @@
 from Node import Node
+from time import sleep
 
 
 # Le premier noeud n'est connecté à aucun autre
@@ -10,4 +11,5 @@ n3 = Node("localhost", 8002, remote_host="localhost", remote_port=8000)
 
 n1.start()
 n2.start()
+sleep(1)
 n3.start()
