@@ -11,8 +11,8 @@ class Node:
     def __init__(self, listen_host: str, listen_port: int,
         remote_host: str = None, remote_port: int = None, max_nodes: int = 10):
         """
-        Lorsque un noeud est créé il doit se connecter à un noeud déjà existant
-        du réseau. Si c'est le premier alors il n'y a pas besoin de préciser
+        Lorsque un noeud est créé il doit se connecter à un noeud du réseau.
+        préexistant. Si c'est le premier alors il n'y a pas besoin de préciser
         de noeud auquel se connecter.
 
         :param listen_host: Adresse d'écoute noeud.
@@ -57,6 +57,10 @@ class Node:
             # Il faudrait vider cet ensemble après un certain temps
             self.packet_ids.add(pck["id"])
             self.lock_packet_ids.release()
+
+            # Exécution de la callback sur le corps du paquet
+            self._broadcast_callback(pck["body"])
+
             for host, port in self.nodes.copy():
                 try:
                     send(host, port, pck, ignore_errors=False)
@@ -132,8 +136,6 @@ class Node:
 
         # Réception d'un paquet à diffuser
         elif "BROADCAST" == pck["header"]:
-            # Exécution de la callback sur le corps du paquet
-            self._broadcast_callback(pck["body"])
             # Diffusion du paquet sur le réseau
             self.__broadcast(pck)
 
@@ -141,6 +143,7 @@ class Node:
         """
         Fonction appelée sur le corps d'un paquet diffusé sur le réseau.
         Cette fonction peut être personnalisée par héritage.
+        Garantie: Un appel au plus par id de paquet.
 
         :param body: Objet Python du corps du paquet.
         """
@@ -175,7 +178,7 @@ class Node:
 
     def shutdown(self):
         """
-        Eteint le noeud en lui indiquant d'arrêter d'écouter les connexions entrantes.
+        Éteins le noeud en lui indiquant d'arrêter d'écouter les connexions entrantes.
         """
         self.sock.close()
 
