@@ -9,7 +9,7 @@ class Node:
     Les communications utilisent des sockets temporaires unidirectionnels.
     """
     def __init__(self, listen_host: str, listen_port: int,
-        remote_host: str = None, remote_port: int = None, num_nodes: int = 10):
+        remote_host: str = None, remote_port: int = None, max_nodes: int = 10):
         """
         Lorsque un noeud est créé il doit se connecter à un noeud déjà existant
         du réseau. Si c'est le premier alors il n'y a pas besoin de préciser
@@ -19,7 +19,7 @@ class Node:
         :param listen_port: Port associé à cette adresse.
         :param remote_host: Adresse du noeud auquel se connecter.
         :param remote_port: Port associé à cette adresse.
-        :param num_nodes: Nombre maximum de voisins actifs à conserver.
+        :param max_nodes: Nombre maximum de voisins actifs à conserver.
         """
         self.host = listen_host
         self.port = listen_port
@@ -32,7 +32,7 @@ class Node:
 
         # Ensemble des noeuds voisins actifs
         self.nodes = set()
-        self.num_nodes = num_nodes
+        self.max_nodes = max_nodes
         if remote_host is not None and remote_port is not None:
             self.nodes.add((remote_host, remote_port))
 
@@ -100,13 +100,13 @@ class Node:
 
             # Enregistrement du nouvel arrivant si le nombre de connexions
             # actives n'est pas dépassé
-            if len(self.nodes) < self.num_nodes:
+            if len(self.nodes) < self.max_nodes:
                 self.nodes.add((pck["host"], pck["port"]))
 
         # Réception d'une liste de noeuds
         elif "CONNECT_ACCEPTED" == pck["header"]:
             nodes = set([tuple(node) for node in pck["nodes"]])
-            while len(self.nodes) < self.num_nodes and len(nodes) > 0:
+            while len(self.nodes) < self.max_nodes and len(nodes) > 0:
                 self.nodes.add(nodes.pop())
             self.logging(self.nodes)
 
