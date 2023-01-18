@@ -55,8 +55,14 @@ class Node:
             # Il faudrait vider cet ensemble après un certain temps
             self.packet_ids.add(pck["id"])
             self.lock_packet_ids.release()
-            for host, port in self.nodes:
-                send(host, port, pck)
+            for host, port in self.nodes.copy():
+                try:
+                    send(host, port, pck)
+                # Le noeud voisin est inactif
+                except ConnectionRefusedError:
+                    self.nodes.remove((host, port))
+        else:
+            self.lock_packet_ids.release()
 
     def __wait(self):
         """
@@ -68,7 +74,11 @@ class Node:
         """
         # Attente de clients
         while True:
-            sock, ip_client = self.sock.accept()
+            try:
+                sock, ip_client = self.sock.accept()
+            # Le socket a été fermé
+            except OSError:
+                break
             # On traite la requête du client dans un thread séparé
             threading.Thread(target=self.__packet_callback, args=(sock,)).start()
 
@@ -147,6 +157,12 @@ class Node:
         for host, port in self.nodes:
             pck = {"header": "CONNECT", "host": self.host, "port": self.port}
             send(host, port, pck)
+
+    def shutdown(self):
+        """
+        Eteint le noeud en lui indiquant d'arrêter d'écouter les connexions entrantes.
+        """
+        self.sock.close()
 
     def broadcast(self, body: object):
         """
