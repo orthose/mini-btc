@@ -107,8 +107,10 @@ class Node:
         elif "CONNECT_ACCEPTED" == pck["header"]:
             nodes = set([tuple(node) for node in pck["nodes"]])
             while len(self.nodes) < self.max_nodes and len(nodes) > 0:
-                self.nodes.add(nodes.pop())
-            self.logging(self.nodes)
+                node = nodes.pop()
+                # On ne s'ajoute pas soi-même à l'ensemble des noeuds voisins
+                if (self.host, self.port) != node:
+                    self.nodes.add(node)
 
         # Réception d'un paquet à diffuser
         elif "BROADCAST" == pck["header"]:
