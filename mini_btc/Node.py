@@ -186,10 +186,13 @@ class Node:
         """
         Diffusion sur le réseau d'un objet Python.
         Cet objet sera encapsulé dans un paquet de la couche pair à pair.
+        Le champ "id" est automatiquement ajouté à cet objet pour identifier
+        la requête. Il s'agit du même identifiant que celui du paquet.
 
         :param body: Objet Python sérialiable en JSON.
         """
         # On suppose qu'un noeud ne peut pas envoyer plusieurs paquets au même moment
         id = f"{self.name}#{time.time()}"
+        body["id"] = id
         pck = {"header": "BROADCAST", "id": id, "body": body}
         self.__broadcast(pck)
