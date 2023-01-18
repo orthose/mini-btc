@@ -1,5 +1,5 @@
 import socket, threading, time
-from utils import send, recv, logging
+from .utils import send, recv, logging
 from typing import Union
 
 

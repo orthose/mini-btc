@@ -1,4 +1,4 @@
-from Node import Node
+from mini_btc import Node
 from time import sleep
 
 
