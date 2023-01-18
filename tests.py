@@ -13,3 +13,8 @@ n1.start()
 n2.start()
 sleep(1)
 n3.start()
+sleep(1)
+
+# Diffusion d'une requête sur le réseau
+req = {"request": "TRANSACT", "from": "Alice", "to": "Bob", "amount": "1"}
+n1.broadcast(req)
