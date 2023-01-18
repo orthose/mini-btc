@@ -28,17 +28,25 @@ def pipe_sock(sock: socket.socket) -> Tuple[Callable[[object], None], Callable[[
     recv = lambda bufsize=1024: json.loads(sock.recv(bufsize).decode('utf-8'))
     return send, recv
 
-def send(host: str, port: int, obj: object) -> None:
+def send(host: str, port: int, obj: object, ignore_errors=True) -> None:
     """
     Permet d'envoyer un objet à un noeud au travers d'une prise temporaire.
 
     :param host: Adresse du noeud.
     :param port: Port associé à cette adresse.
     :param obj: Objet Python sérialisable en JSON.
+    :param ignore_errors: Si True les erreurs sont ignorées
+    sinon elles sont remontées.
     """
-    sock = create_sock(host, port)
-    sock.send(json.dumps(obj).encode('utf-8'))
-    sock.close()
+    try:
+        sock = create_sock(host, port)
+        sock.send(json.dumps(obj).encode('utf-8'))
+        sock.close()
+    except Exception as error:
+        if ignore_errors:
+            return
+        else:
+            raise error
 
 def recv(sock: socket.socket, bufsize: int = 1024) -> object:
     """

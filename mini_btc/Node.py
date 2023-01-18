@@ -59,7 +59,7 @@ class Node:
             self.lock_packet_ids.release()
             for host, port in self.nodes.copy():
                 try:
-                    send(host, port, pck)
+                    send(host, port, pck, ignore_errors=False)
                 # Le noeud voisin est inactif
                 except ConnectionRefusedError:
                     connection_refused = True
@@ -79,13 +79,14 @@ class Node:
         Lorsqu'un paquet arrive il est alors traité dans un thread séparé pour
         ne pas bloquer le thread principal d'écoute.
         """
-        # Attente de clients
         while True:
             try:
+                # Attente de clients
                 sock, ip_client = self.sock.accept()
             # Le socket a été fermé
             except OSError:
                 break
+
             # On traite la requête du client dans un thread séparé
             threading.Thread(target=self.__packet_callback, args=(sock,)).start()
 
