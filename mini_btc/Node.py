@@ -102,6 +102,7 @@ class Node:
         CONNECT: Première demande de connexion d'un noeud.
         CONNECT_ACCEPTED: Connexion d'un noeud acceptée.
         BROADCAST: Diffusion d'un paquet sur le réseau.
+        PRIVATE: Paquet privé à ne pas diffuser.
         """
         # Réception du paquet
         pck = recv(sock)
@@ -139,11 +140,24 @@ class Node:
             # Diffusion du paquet sur le réseau
             self.__broadcast(pck)
 
+        # Paquet privé à ne pas diffuser
+        elif "PRIVATE" == pck["header"]:
+            self._private_callback(pck["body"])
+
     def _broadcast_callback(self, body: object):
         """
         Fonction appelée sur le corps d'un paquet diffusé sur le réseau.
         Cette fonction peut être personnalisée par héritage.
-        Garantie: Un appel au plus par id de paquet.
+        Garantie: Un appel au plus par "id" de paquet.
+
+        :param body: Objet Python du corps du paquet.
+        """
+        pass
+
+    def _private_callback(self, body: object):
+        """
+        Fonction appelée sur le corps d'un paquet privé.
+        Cette fonction peut être personnalisée par héritage.
 
         :param body: Objet Python du corps du paquet.
         """
@@ -196,3 +210,18 @@ class Node:
         body["id"] = id
         pck = {"header": "BROADCAST", "id": id, "body": body}
         self.__broadcast(pck)
+
+    def send(self, remote_host: str, remote_port: int, body: object):
+        """
+        Envoi d'un paquet privé à un seul noeud.
+        Les champs "host" et "port" indiquant l'expéditeur sont automatiquement
+        ajoutés au corps du paquet.
+
+        :param body: Objet Python sérialiable en JSON.
+        :param remote_host: Adresse du noeud auquel envoyer le paquet.
+        :param remote_port: Port associé à cette adresse.
+        """
+        body["host"] = self.host
+        body["port"] = self.port
+        pck = {"header": "PRIVATE", "body": body}
+        send(remote_host, remote_port, pck)

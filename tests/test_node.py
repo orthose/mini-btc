@@ -26,7 +26,6 @@ req = {"request": "TRANSACT", "from": "Alice", "to": "Bob", "amount": "1"}
 n1.broadcast(req)
 
 # Déconnexion du premier noeud
-#del n1
 n1.shutdown()
 del n1
 sleep(1)
@@ -40,3 +39,7 @@ sleep(1)
 
 n2.logging(n2.nodes)
 n3.logging(n3.nodes)
+
+# Envoi d'un paquet privé de n2 vers n3
+req = {"request": "GET_BLOCKS", "start": 5}
+n2.send("localhost", 8002, req)
