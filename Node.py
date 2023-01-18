@@ -49,6 +49,8 @@ class Node:
 
         :param pck: Objet Python contenant le champ id.
         """
+        connection_refused = False
+
         # On ne renvoie pas si on a déjà envoyé pour éviter les cycles
         self.lock_packet_ids.acquire()
         if pck["id"] not in self.packet_ids:
@@ -60,9 +62,14 @@ class Node:
                     send(host, port, pck)
                 # Le noeud voisin est inactif
                 except ConnectionRefusedError:
+                    connection_refused = True
                     self.nodes.remove((host, port))
         else:
             self.lock_packet_ids.release()
+
+        # Recherche de nouveaux voisins
+        if connection_refused:
+            self.connect()
 
     def __wait(self):
         """
@@ -146,6 +153,15 @@ class Node:
         """
         logging(f"<{self.host}:{self.port}> " + str(msg))
 
+    def connect(self):
+        """
+        Demande de connexion aux noeuds voisins pour mettre à jour l'ensemble
+        des noeuds voisins actifs.
+        """
+        for host, port in self.nodes:
+            pck = {"header": "CONNECT", "host": self.host, "port": self.port}
+            send(host, port, pck)
+
     def start(self):
         """
         Démarre le noeud en le connectant au réseau.
@@ -154,9 +170,7 @@ class Node:
         threading.Thread(target=self.__wait).start()
 
         # Récupération de la liste des noeuds voisins
-        for host, port in self.nodes:
-            pck = {"header": "CONNECT", "host": self.host, "port": self.port}
-            send(host, port, pck)
+        self.connect()
 
     def shutdown(self):
         """

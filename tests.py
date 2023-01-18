@@ -28,6 +28,7 @@ n1.broadcast(req)
 # Déconnexion du premier noeud
 #del n1
 n1.shutdown()
+del n1
 sleep(1)
 
 # Diffusion d'une requête sur le réseau
@@ -35,3 +36,7 @@ req["from"] = "Bob"
 req["to"] = "Alice"
 req["amount"] = 2
 n2.broadcast(req)
+sleep(1)
+
+n2.logging(n2.nodes)
+n3.logging(n3.nodes)
