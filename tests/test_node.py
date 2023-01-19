@@ -24,6 +24,7 @@ n3.logging(n3.nodes)
 # Diffusion d'une requête sur le réseau
 req = {"request": "TRANSACT", "from": "Alice", "to": "Bob", "amount": "1"}
 n1.broadcast(req)
+sleep(1)
 
 # Déconnexion du premier noeud
 n1.shutdown()

@@ -1,5 +1,5 @@
 import socket, threading, time
-from .utils import send, recv, logging
+from mini_btc.utils import send, recv, logging
 from typing import Union
 
 
@@ -199,7 +199,7 @@ class Node:
         """
         Éteins le noeud en lui indiquant d'arrêter d'écouter les connexions entrantes.
         """
-        self.sock.close()
+        self.sock.shutdown(socket.SHUT_RDWR)
 
     def broadcast(self, body: object):
         """
