@@ -59,7 +59,7 @@ class Node:
             self.lock_packet_ids.release()
 
             # Exécution de la callback sur le corps du paquet
-            self._broadcast_callback(pck["body"])
+            self._broadcast_callback(pck["host"], pck["port"], pck["id"], pck["body"].copy())
 
             for host, port in self.nodes.copy():
                 try:
@@ -142,23 +142,28 @@ class Node:
 
         # Paquet privé à ne pas diffuser
         elif "PRIVATE" == pck["header"]:
-            self._private_callback(pck["body"])
+            self._private_callback(pck["host"], pck["port"], pck["body"].copy())
 
-    def _broadcast_callback(self, body: object):
+    def _broadcast_callback(self, host: str, port: int, id: str, body: object):
         """
         Fonction appelée sur le corps d'un paquet diffusé sur le réseau.
         Cette fonction peut être personnalisée par héritage.
         Garantie: Un appel au plus par "id" de paquet.
 
+        :param host: Adresse du noeud expéditeur.
+        :param port: Port associée à cette adresse.
+        :param id: Identifiant du paquet.
         :param body: Objet Python du corps du paquet.
         """
         pass
 
-    def _private_callback(self, body: object):
+    def _private_callback(self, host: str, port: int, body: object):
         """
         Fonction appelée sur le corps d'un paquet privé.
         Cette fonction peut être personnalisée par héritage.
 
+        :param host: Adresse du noeud expéditeur.
+        :param port: Port associée à cette adresse.
         :param body: Objet Python du corps du paquet.
         """
         pass
@@ -169,7 +174,7 @@ class Node:
 
         :param msg: Message à afficher.
         """
-        logging(f"<{self.host}:{self.port}> " + str(msg))
+        logging(f"<{self.name}> " + str(msg))
 
     def connect(self):
         """
@@ -207,8 +212,7 @@ class Node:
         """
         # On suppose qu'un noeud ne peut pas envoyer plusieurs paquets au même moment
         id = f"{self.name}#{time.time()}"
-        body["id"] = id
-        pck = {"header": "BROADCAST", "id": id, "body": body}
+        pck = {"header": "BROADCAST", "host": self.host, "port": self.port, "id": id, "body": body}
         self.__broadcast(pck)
 
     def send(self, remote_host: str, remote_port: int, body: object):
@@ -221,7 +225,5 @@ class Node:
         :param remote_host: Adresse du noeud auquel envoyer le paquet.
         :param remote_port: Port associé à cette adresse.
         """
-        body["host"] = self.host
-        body["port"] = self.port
-        pck = {"header": "PRIVATE", "body": body}
+        pck = {"header": "PRIVATE", "host": self.host, "port": self.port, "body": body}
         send(remote_host, remote_port, pck)

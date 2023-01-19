@@ -1,7 +1,13 @@
-import socket, json
+import socket, json, hashlib
 from typing import Callable, Tuple, Union
 import datetime as dt
 
+
+def json_encode(obj: object) -> bytes:
+    return json.dumps(obj).encode('utf-8')
+
+def json_decode(obj: bytes) -> object:
+    return json.loads(obj.decode('utf-8'))
 
 def create_sock(host: str, port: int) -> socket.socket:
     """
@@ -24,8 +30,8 @@ def pipe_sock(sock: socket.socket) -> Tuple[Callable[[object], None], Callable[[
     :param sock: Prise connectée à un noeud.
     :return: Fonctions pour envoyer et recevoir un objet Python sérialisable en JSON.
     """
-    send = lambda obj: sock.send(json.dumps(obj).encode('utf-8'))
-    recv = lambda bufsize=1024: json.loads(sock.recv(bufsize).decode('utf-8'))
+    send = lambda obj: sock.send(json_encode(obj))
+    recv = lambda bufsize=1024: json_decode(sock.recv(bufsize))
     return send, recv
 
 def send(host: str, port: int, obj: object, ignore_errors=True) -> None:
@@ -40,7 +46,7 @@ def send(host: str, port: int, obj: object, ignore_errors=True) -> None:
     """
     try:
         sock = create_sock(host, port)
-        sock.send(json.dumps(obj).encode('utf-8'))
+        sock.send(json_encode(obj))
         sock.close()
     except Exception as error:
         if ignore_errors:
@@ -57,7 +63,16 @@ def recv(sock: socket.socket, bufsize: int = 1024) -> object:
     :param bufsize: Nombre d'octets attendus.
     :return: Objet Python.
     """
-    return json.loads(sock.recv(bufsize).decode('utf-8'))
+    return json_decode(sock.recv(bufsize))
+
+def sha256(obj: object) -> str:
+    """
+    Fonction de hachage SHA256 d'un objet Python.
+
+    :param obj: Objet Python sérialisable en JSON.
+    :return: String du hash de l'objet.
+    """
+    return hashlib.sha256(json_encode(obj)).hexdigest()
 
 def logging(msg: Union[str, object]) -> None:
     """
