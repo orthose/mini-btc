@@ -15,7 +15,7 @@ class Node:
         préexistant. Si c'est le premier alors il n'y a pas besoin de préciser
         de noeud auquel se connecter.
 
-        :param listen_host: Adresse d'écoute noeud.
+        :param listen_host: Adresse d'écoute du noeud.
         :param listen_port: Port associé à cette adresse.
         :param remote_host: Adresse du noeud auquel se connecter.
         :param remote_port: Port associé à cette adresse.
