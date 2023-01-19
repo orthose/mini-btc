@@ -38,3 +38,14 @@ sleep(1)
 n1.logging(n1.buf_trans)
 n2.logging(n2.buf_trans)
 n3.logging(n3.buf_trans)
+
+# Demande de blocs à un noeud
+n1.ledger = []
+req = {"request": "GET_BLOCKS", "start": 0}
+n1.send("localhost", 8001, req)
+sleep(1)
+
+# Vérification de l'état de la blockchain sur chaque noeud
+n1.logging(n1.ledger)
+n2.logging(n2.ledger)
+n3.logging(n3.ledger)
