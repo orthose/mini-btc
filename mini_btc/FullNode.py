@@ -9,7 +9,7 @@ class FullNode(Node):
     """
     def __init__(self, listen_host: str, listen_port: int,
         remote_host: str = None, remote_port: int = None, max_nodes: int = 10,
-        block_size: int = 5, difficulty: int = 2):
+        block_size: int = 3, difficulty: int = 5):
         """
         Création d'un noeud appartenant à la BlockChain.
 
@@ -76,13 +76,19 @@ class FullNode(Node):
                     # Le bloc proposé suit-il le dernier bloc ?
                     if self._check_chain(block):
                         self.ledger.append(block)
+                        # Suppression des transactions déjà traitées
+                        self._delete_trans(block["trans"])
 
                 # En retard de plus de 1 bloc
                 elif k > n:
                     req = {"request": "GET_BLOCKS", "start": n}
                     super().send(host, port, req)
 
-                # Si pas de retard ne pas prendre en compte
+                # Note: On ne prend pas en compte le cas où on a empilé des blocs
+                # qui ne sont pas bons: branche qu'il faudrait tuer
+                # Une solution serait de demander toute la blockchain mais coûteux
+
+                # Si pas de retard ne pas prendre en compte le bloc proposé
 
     def _private_callback(self, host: str, port: int, body: object):
         """
@@ -103,14 +109,26 @@ class FullNode(Node):
 
         # Réception de blocs résolus
         elif "LIST_BLOCKS" == body["request"]:
+            trans = set()
             # On suppose que les blocs sont bien ordonnés
             for block in body["blocks"]:
                 # Le bloc est-il valide et complète-il la blockchain ?
                 if self._check_block(block) and self._check_chain(block):
                     # Ajout du bloc dans la blockchain
                     self.ledger.append(block)
-                    # Suppression des transactions déjà traitées
-                    self.buf_trans.difference_update(set(block["trans"]))
+                    # Transactions à supprimer
+                    trans.update(set(block["trans"]))
+
+            # Suppression des transactions déjà traitées
+            self._delete_trans(trans)
+
+    def _delete_trans(self, trans: set):
+        """
+        Supprime les transactions en entrée du buffer.
+
+        :param trans: Transactions à supprimer
+        """
+        self.buf_trans.difference_update(trans)
 
     def _transact_callback(self, host: str, port: int, body: object):
         """
@@ -136,6 +154,9 @@ class FullNode(Node):
         # Le hash du bloc comprend-il difficulty 0 au début ?
         res = res and '0' * self.difficulty == sha256(block)[0:self.difficulty]
 
+        # Il faudrait également vérifier que les transactions proposées
+        # ne sont pas déjà incluses dans un bloc déjà validé
+
         return res
 
     def _check_chain(self, block: object) -> bool:
@@ -145,4 +166,4 @@ class FullNode(Node):
         :param block: Objet Python du bloc à vérifier.
         :return: True si valide False sinon.
         """
-        return len(self.ledger) == 0 or sha256(self.ledger[-1]) == body["hash"]
+        return len(self.ledger) == 0 or sha256(self.ledger[-1]) == block["hash"]
