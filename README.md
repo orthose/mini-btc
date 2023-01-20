@@ -2,6 +2,9 @@
 Projet de création d'une blockchain bitcoin locale simplifiée
 basée sur une architecture pair à pair construite manuellement.
 
+# Architecture
+![Architecture](./archi.jpg)
+
 # Exécution des tests
 ```shell
 cd mini-btc
