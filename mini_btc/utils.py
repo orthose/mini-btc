@@ -54,7 +54,7 @@ def send(host: str, port: int, obj: object, ignore_errors=True) -> None:
         else:
             raise error
 
-def recv(sock: socket.socket, bufsize: int = 1024) -> object:
+def recv(sock: socket.socket, bufsize: int = 2048) -> object:
     """
     Permet de recevoir un objet envoyé par un noeud.
     L'objet envoyé doit être un JSON sérialisé.
