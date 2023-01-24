@@ -17,7 +17,7 @@ n3.start()
 sleep(1)
 
 # Création du premier bloc sur n1
-genesis = {"index": 0, "hash": None, "nonce": 249, "trans": []}
+genesis = {"index": 0, "hash": None, "nonce": 1927218, "trans": []}
 n1.ledger.append(genesis)
 
 # Soumission de ce premier bloc sur le réseau

@@ -84,10 +84,6 @@ class FullNode(Node):
                     req = {"request": "GET_BLOCKS", "start": n}
                     super().send(host, port, req)
 
-                # Note: On ne prend pas en compte le cas où on a empilé des blocs
-                # qui ne sont pas bons: branche qu'il faudrait tuer
-                # Une solution serait de demander toute la blockchain mais coûteux
-
                 # Si pas de retard ne pas prendre en compte le bloc proposé
 
     def _private_callback(self, host: str, port: int, body: object):
@@ -104,20 +100,28 @@ class FullNode(Node):
         """
         # Demande de blocs résolus
         if "GET_BLOCKS" == body["request"]:
-            req = {"request": "LIST_BLOCKS", "blocks": self.ledger[body["start"]:]}
+            # On envoie les 6 derniers blocs car le (n - 6) bloc est considéré comme validé
+            start = max(0, body["start"] - 6)
+            req = {"request": "LIST_BLOCKS", "blocks": self.ledger[start:]}
             super().send(host, port, req)
 
         # Réception de blocs résolus
         elif "LIST_BLOCKS" == body["request"]:
             trans = set()
+
             # On suppose que les blocs sont bien ordonnés
             for block in body["blocks"]:
                 # Le bloc est-il valide et complète-il la blockchain ?
-                if self._check_block(block) and self._check_chain(block):
-                    # Ajout du bloc dans la blockchain
-                    self.ledger.append(block)
-                    # Transactions à supprimer
-                    trans.update(set(block["trans"]))
+                if not (self._check_block(block)
+                        and self._check_chain(block, index=block["index"]-1)):
+                    return
+
+                # Transactions à supprimer
+                trans.update(set(block["trans"]))
+
+            # Modification du registre
+            fst_index = body["blocks"][0]["index"]
+            self.ledger = self.ledger[:fst_index] + body["blocks"]
 
             # Suppression des transactions déjà traitées
             self._delete_trans(trans)
@@ -155,15 +159,16 @@ class FullNode(Node):
         res = res and '0' * self.difficulty == sha256(block)[0:self.difficulty]
 
         # Il faudrait également vérifier que les transactions proposées
-        # ne sont pas déjà incluses dans un bloc déjà validé
+        # ne sont pas encore consommées
 
         return res
 
-    def _check_chain(self, block: object) -> bool:
+    def _check_chain(self, block: object, index: int = -1) -> bool:
         """
         Vérifie si un bloc peut être ajouté en fin de registre.
 
         :param block: Objet Python du bloc à vérifier.
+        :param index: Indice du bloc du registre avec lequel chaîner.
         :return: True si valide False sinon.
         """
-        return len(self.ledger) == 0 or sha256(self.ledger[-1]) == block["hash"]
+        return len(self.ledger) == 0 or sha256(self.ledger[index]) == block["hash"]
