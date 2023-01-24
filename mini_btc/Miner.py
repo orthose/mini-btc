@@ -100,7 +100,7 @@ class Miner(FullNode):
             block = {
                 "index": len(self.ledger),
                 "hash": self.ledger[-1]["hash"],
-                "nonce": random.randint(0, 1_000_000),
+                "nonce": random.randint(0, 1_000_000_000),
                 "trans": decoded_trans
             }
 
