@@ -118,7 +118,7 @@ class Node:
             # Notification du nouvel arrivant à tous les noeuds voisins
             # Attention: Ce n'est pas un broadcast !
             rpck["nodes"] = [(pck["host"], pck["port"])]
-            for host, port in self.nodes:
+            for host, port in self.nodes.copy():
                 send(host, port, rpck)
 
             # Enregistrement du nouvel arrivant si le nombre de connexions
@@ -181,7 +181,7 @@ class Node:
         Demande de connexion aux noeuds voisins pour mettre à jour l'ensemble
         des noeuds voisins actifs.
         """
-        for host, port in self.nodes:
+        for host, port in self.nodes.copy():
             pck = {"header": "CONNECT", "host": self.host, "port": self.port}
             send(host, port, pck)
 
