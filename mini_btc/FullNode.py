@@ -77,7 +77,8 @@ class FullNode(Node):
                     if self._check_chain(block):
                         self.ledger.append(block)
                         # Suppression des transactions déjà traitées
-                        self._delete_trans(block["trans"])
+                        encoded_trans = {json_encode(tx) for tx in block["trans"]}
+                        self._delete_trans(encoded_trans)
 
                 # En retard de plus de 1 bloc
                 elif k > n:
