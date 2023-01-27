@@ -1,4 +1,4 @@
-import socket, json, hashlib
+import socket, json, hashlib, sys
 from typing import Callable, Tuple, Union
 import datetime as dt
 
@@ -23,47 +23,62 @@ def create_sock(host: str, port: int) -> socket.socket:
     return sock
 
 
-def pipe_sock(sock: socket.socket) -> Tuple[Callable[[object], None], Callable[[int], object]]:
-    """
-    Permet d'échanger des objets entre noeuds au travers d'une prise.
-
-    :param sock: Prise connectée à un noeud.
-    :return: Fonctions pour envoyer et recevoir un objet Python sérialisable en JSON.
-    """
-    send = lambda obj: sock.send(json_encode(obj))
-    recv = lambda bufsize=1024: json_decode(sock.recv(bufsize))
-    return send, recv
-
 def send(host: str, port: int, obj: object, ignore_errors=True) -> None:
     """
     Permet d'envoyer un objet à un noeud au travers d'une prise temporaire.
+    La fonction implémente un protocole permettant au destinataire de savoir
+    quelle taille de paquet il attend.
 
     :param host: Adresse du noeud.
     :param port: Port associé à cette adresse.
     :param obj: Objet Python sérialisable en JSON.
-    :param ignore_errors: Si True les erreurs sont ignorées
-    sinon elles sont remontées.
+    :param ignore_errors: Si True les erreurs sont ignorées.
     """
     try:
+        # Création de la prise
         sock = create_sock(host, port)
-        sock.send(json_encode(obj))
+        # Détermination de la taille du paquet
+        obj = json_encode(obj)
+        length = sys.getsizeof(obj)
+        # Envoi de la taille du paquet
+        sock.sendall(json_encode({"Packet-Length": length}))
+        # Synchronisation avec le destinataire
+        assert length == json_decode(sock.recv(128))["Packet-Length"]
+        # Envoi du paquet complet
+        sock.sendall(obj)
+        # Fermeture de la prise
         sock.close()
+
     except Exception as error:
         if ignore_errors:
             return
         else:
             raise error
 
-def recv(sock: socket.socket, bufsize: int = 2048) -> object:
+def recv(sock: socket.socket, ignore_errors=True) -> object:
     """
     Permet de recevoir un objet envoyé par un noeud.
     L'objet envoyé doit être un JSON sérialisé.
+    La fonction suit le protocole de la fonction précédente.
 
     :param sock: Prise connectée à un noeud.
-    :param bufsize: Nombre d'octets attendus.
+    :param ignore_errors: Si True les erreurs sont ignorées.
     :return: Objet Python.
     """
-    return json_decode(sock.recv(bufsize))
+    try:
+        # Réception de la taille du paquet
+        obj = json_decode(sock.recv(128))
+        bufsize = obj["Packet-Length"]
+        # Synchronisation avec l'expéditeur
+        sock.sendall(json_encode(obj))
+        # Réception du paquet
+        return json_decode(sock.recv(bufsize))
+
+    except Exception as error:
+        if ignore_errors:
+            return
+        else:
+            raise error
 
 def sha256(obj: object) -> str:
     """
