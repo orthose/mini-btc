@@ -99,7 +99,7 @@ class Miner(FullNode):
             decoded_trans = [json_decode(x) for x in trans]
             block = {
                 "index": len(self.ledger),
-                "hash": self.ledger[-1]["hash"],
+                "hash": sha256(self.ledger[-1]),
                 "nonce": random.randint(0, 1_000_000_000),
                 "trans": decoded_trans
             }

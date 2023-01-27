@@ -13,8 +13,8 @@ for _ in range(5):
 # Démarrage des mineurs
 for m in miners:
     m.start()
+    sleep(1)
 
-sleep(1)
 for m in miners:
     m.logging(m.nodes)
 
@@ -29,11 +29,12 @@ def pseudo(size=16):
     alpha = [chr(i) for i in range(97, 123)]
     return ''.join(random.sample(alpha, size))
 
-# Soumission de 10 transactions aléatoires
-for _ in range(10):
+# Soumission de 21 transactions aléatoires
+for _ in range(21):
     wallet.transact(exp=pseudo(), dest=pseudo(), amount=random.randint(1, 10))
 
-# Le minage dure environ 3 minutes pour 3 blocs
-sleep(4 * 60)
+# Le minage dure environ 8 minutes pour 21 / 3 = 7 blocs
+sleep(8 * 60)
+print("\n### RESULTATS ###\n")
 for m in miners:
-    m.logging(m.ledger)
+    m.logging([block["nonce"] for block in m.ledger])
