@@ -86,7 +86,7 @@ class Miner(FullNode):
         while True:
             with self.mining_cond:
                 # On démarre le minage si on a reçu suffisamment de transactions
-                while len(self.ledger) == 0 or len(self.buf_trans) < self.block_size:
+                while len(self.buf_trans) < self.block_size:
                     # Attente passive
                     self.mining_cond.wait()
 
@@ -99,7 +99,7 @@ class Miner(FullNode):
             decoded_trans = [json_decode(x) for x in trans]
             block = {
                 "index": len(self.ledger),
-                "hash": sha256(self.ledger[-1]),
+                "hash": None if len(self.ledger) == 0 else sha256(self.ledger[-1]),
                 "nonce": random.randint(0, 1_000_000_000),
                 "trans": decoded_trans
             }
