@@ -1,6 +1,7 @@
 import threading, random
 from mini_btc import FullNode
 from mini_btc.utils import sha256, json_decode
+from typing import List
 
 
 class Miner(FullNode):
@@ -125,11 +126,13 @@ class Miner(FullNode):
         req = {"request": "SUBMIT_BLOCK", "block": block}
         self.broadcast(req)
 
-    def genesis(self):
+    def genesis(self, tx: List = []):
         """
         Construit, mine et soumet un bloc genesis servant de racine à la BlockChain.
+
+        :param tx: Liste de transactions initiales pour approvisionner les comptes.
         """
-        block = {"index": 0, "hash": None, "nonce": 0, "trans": []}
+        block = {"index": 0, "hash": None, "nonce": 0, "trans": tx}
         self.is_mining = True
         self.__mine(block)
         self.ledger.append(block)
