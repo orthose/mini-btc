@@ -1,3 +1,4 @@
+import threading
 from mini_btc import Node
 from mini_btc.utils import json_encode, sha256, send
 
@@ -33,6 +34,7 @@ class FullNode(Node):
 
         # Registre pour stocker la liste de blocs
         self.ledger = []
+        self.lock_ledger = threading.Lock()
 
         # Tampon de transactions
         self.buf_trans = set()
@@ -74,11 +76,13 @@ class FullNode(Node):
                 # En retard de 1 bloc
                 if k == n:
                     # Le bloc proposé suit-il le dernier bloc ?
+                    self.lock_ledger.acquire()
                     if self._check_chain(block):
                         self.ledger.append(block)
                         # Suppression des transactions déjà traitées
                         encoded_trans = {json_encode(tx) for tx in block["trans"]}
                         self._delete_trans(encoded_trans)
+                    self.lock_ledger.release()
 
                 # En retard de plus de 1 bloc
                 elif k > n:
@@ -111,10 +115,12 @@ class FullNode(Node):
             trans = set()
 
             # On suppose que les blocs sont bien ordonnés
+            self.lock_ledger.acquire()
             for block in body["blocks"]:
                 # Le bloc est-il valide et complète-il la blockchain ?
                 if not (self._check_block(block)
                         and self._check_chain(block, index=block["index"]-1)):
+                    self.lock_ledger.release()
                     return
 
                 # Transactions à supprimer
@@ -123,6 +129,7 @@ class FullNode(Node):
             # Modification du registre
             fst_index = body["blocks"][0]["index"]
             self.ledger = self.ledger[:fst_index] + body["blocks"]
+            self.lock_ledger.release()
 
             # Suppression des transactions déjà traitées
             self._delete_trans(trans)

@@ -108,14 +108,17 @@ class Miner(FullNode):
             # Minage du bloc
             self.__mine(block)
 
-            # Si on a gagné la compétition
+            # Si on croit avoir gagné la compétition on soumet le bloc
             if self.is_mining:
-                # Enregistrement du bloc dans le registre
-                self.ledger.append(block)
-                # On retire les transactions utilisées du buffer
-                super()._delete_trans(encoded_trans)
-                # Soumission du bloc
-                self.submit_block(block)
+                self.lock_ledger.acquire()
+                if self._check_block(block) and self._check_chain(block):
+                    # Enregistrement du bloc dans le registre
+                    self.ledger.append(block)
+                    # On retire les transactions utilisées du buffer
+                    super()._delete_trans(encoded_trans)
+                    # Soumission du bloc
+                    self.submit_block(block)
+                self.lock_ledger.release()
 
     def submit_block(self, block: object):
         """

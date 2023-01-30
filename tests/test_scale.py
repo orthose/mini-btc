@@ -33,8 +33,8 @@ def pseudo(size=16):
 for _ in range(21):
     wallet.transact(exp=pseudo(), dest=pseudo(), amount=random.randint(1, 10))
 
-# Le minage dure environ 8 minutes pour 21 / 3 = 7 blocs
-sleep(8 * 60)
+# Le minage dure environ 3 minutes pour 21 / 3 = 7 blocs
+sleep(3 * 60)
 print("\n### RESULTATS ###\n")
 for m in miners:
     m.logging([block["nonce"] for block in m.ledger])
