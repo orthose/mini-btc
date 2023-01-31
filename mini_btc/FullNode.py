@@ -77,16 +77,18 @@ class FullNode(Node):
                 if k == n:
                     # Le bloc proposé suit-il le dernier bloc ?
                     self.lock_ledger.acquire()
+
                     if self._check_chain(block):
                         self.ledger.append(block)
+
                         # Suppression des transactions déjà traitées
-                        encoded_trans = {json_encode(tx) for tx in block["trans"]}
-                        self._delete_trans(encoded_trans)
+                        self._delete_trans({json_encode(tx) for tx in block["trans"]})
+
                     self.lock_ledger.release()
 
                 # En retard de plus de 1 bloc
                 elif k > n:
-                    req = {"request": "GET_BLOCKS", "start": n}
+                    req = {"request": "GET_BLOCKS"}
                     super().send(host, port, req)
 
                 # Si pas de retard ne pas prendre en compte le bloc proposé
@@ -105,34 +107,49 @@ class FullNode(Node):
         """
         # Demande de blocs résolus
         if "GET_BLOCKS" == body["request"]:
-            # On envoie les 6 derniers blocs car le (n - 6) bloc est considéré comme validé
-            start = max(0, body["start"] - 6)
-            req = {"request": "LIST_BLOCKS", "blocks": self.ledger[start:]}
+            # On envoie la blockchain entière pour simplifier
+            req = {"request": "LIST_BLOCKS", "blocks": self.ledger}
             super().send(host, port, req)
 
         # Réception de blocs résolus
+        # Un noeud qui se connecte plus tard peut récupérer toute la blockchain
         elif "LIST_BLOCKS" == body["request"]:
-            trans = set()
+            new_tx = set()
+            old_tx = set()
 
-            # On suppose que les blocs sont bien ordonnés
+            # Il faut au moins un bloc reçu
+            if len(body["blocks"]) == 0:
+                return
+
+            # Récupération des anciennes transactions
+            for block in self.ledger:
+                old_tx.update({json_encode(tx) for tx in block["trans"]})
+
             self.lock_ledger.acquire()
-            for block in body["blocks"]:
+
+            # Suppression du registre actuel
+            block = body["blocks"][0]
+            if not self._check_block(block):
+                return
+            self.ledger = [block]
+
+            # Reconstruction du registre
+            # On suppose que les blocs sont bien ordonnés
+            for block in body["blocks"][1:]:
                 # Le bloc est-il valide et complète-il la blockchain ?
-                if not (self._check_block(block)
-                        and self._check_chain(block, index=block["index"]-1)):
-                    self.lock_ledger.release()
-                    return
+                if not (self._check_block(block) and self._check_chain(block)):
+                    break
 
-                # Transactions à supprimer
-                trans.update(set(block["trans"]))
+                self.ledger.append(block)
+                new_tx.update({json_encode(tx) for tx in block["trans"]})
 
-            # Modification du registre
-            fst_index = body["blocks"][0]["index"]
-            self.ledger = self.ledger[:fst_index] + body["blocks"]
             self.lock_ledger.release()
 
+            # Ajout des anciennes transactions libérées
+            self.buf_trans.update(old_tx)
+
             # Suppression des transactions déjà traitées
-            self._delete_trans(trans)
+            self._delete_trans(new_tx)
 
     def _delete_trans(self, trans: set):
         """
@@ -171,12 +188,11 @@ class FullNode(Node):
 
         return res
 
-    def _check_chain(self, block: object, index: int = -1) -> bool:
+    def _check_chain(self, block: object) -> bool:
         """
         Vérifie si un bloc peut être ajouté en fin de registre.
 
         :param block: Objet Python du bloc à vérifier.
-        :param index: Indice du bloc du registre avec lequel chaîner.
         :return: True si valide False sinon.
         """
-        return len(self.ledger) == 0 or sha256(self.ledger[index]) == block["hash"]
+        return len(self.ledger) == 0 or sha256(self.ledger[-1]) == block["hash"]
