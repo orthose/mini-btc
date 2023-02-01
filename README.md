@@ -5,6 +5,14 @@ basée sur une architecture pair à pair construite manuellement.
 # Architecture
 ![Architecture](./archi.jpg)
 
+# Environnement virtuel
+```shell
+python3 -m venv venv
+source venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
 # Exécution des tests
 ```shell
 cd mini-btc
