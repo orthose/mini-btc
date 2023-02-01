@@ -9,5 +9,6 @@ basée sur une architecture pair à pair construite manuellement.
 ```shell
 cd mini-btc
 export PYTHONPATH=`pwd`
-python3 tests/tests_node.py
+cd tests
+python3 tests_node.py
 ```

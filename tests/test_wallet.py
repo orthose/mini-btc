@@ -16,11 +16,11 @@ sleep(1)
 n3.start()
 sleep(1)
 
-w = Wallet("localhost", 8003, "localhost", 8000)
+w = Wallet("wallet.bin", "localhost", 8003, "localhost", 8000)
 w.start()
 
 # Demande de transaction
-w.transact("Alice", "Bob", 1)
+w.transfer("abcdefgh", 1)
 sleep(1)
 
 # Vérification de l'état des noeuds

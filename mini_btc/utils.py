@@ -1,4 +1,5 @@
 import socket, json, hashlib, sys
+from base58 import b58encode
 from typing import Callable, Tuple, Union
 import datetime as dt
 
@@ -6,8 +7,10 @@ import datetime as dt
 def json_encode(obj: object) -> bytes:
     return json.dumps(obj).encode('utf-8')
 
+
 def json_decode(obj: bytes) -> object:
     return json.loads(obj.decode('utf-8'))
+
 
 def create_sock(host: str, port: int) -> socket.socket:
     """
@@ -55,6 +58,7 @@ def send(host: str, port: int, obj: object, ignore_errors=True) -> None:
         else:
             raise error
 
+
 def recv(sock: socket.socket, ignore_errors=True) -> object:
     """
     Permet de recevoir un objet envoyé par un noeud.
@@ -80,6 +84,7 @@ def recv(sock: socket.socket, ignore_errors=True) -> object:
         else:
             raise error
 
+
 def sha256(obj: object) -> str:
     """
     Fonction de hachage SHA256 d'un objet Python.
@@ -88,6 +93,21 @@ def sha256(obj: object) -> str:
     :return: String du hash de l'objet.
     """
     return hashlib.sha256(json_encode(obj)).hexdigest()
+
+
+def rsa_publickey(private_key: object) -> Tuple[str, str]:
+    """
+    Permet d'obtenir la clé publique et l'adresse à partir de la clé privée.
+    Elles sont encodées en base 58.
+
+    :param private_key: Clé privée secrète.
+    :return: Le couple clé publique, adresse.
+    """
+    public_key = private_key.publickey().exportKey("DER")
+    address = b58encode(hashlib.sha256(public_key).digest()).decode('utf-8')
+    public_key = b58encode(public_key).decode('utf-8')
+    return public_key, address
+
 
 def logging(msg: Union[str, object]) -> None:
     """

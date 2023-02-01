@@ -16,7 +16,7 @@ sleep(1)
 n3.start()
 sleep(1)
 
-w = Wallet("localhost", 8003, "localhost", 8000)
+w = Wallet("./wallet.bin", "localhost", 8003, "localhost", 8000)
 w.start()
 
 # Génération du bloc de départ
@@ -27,9 +27,9 @@ n1.logging(n1.ledger)
 n2.logging(n2.ledger)
 n3.logging(n3.ledger)
 
-w.transact(exp="Bob", dest="Alice", amount=1)
-w.transact(exp="Alice", dest="Bob", amount=2)
-w.transact(exp="Charles", dest="Bob", amount=3)
+w.transfer(dest="ykvoezkvoek", amount=1)
+w.transfer(dest="ejiajciajei", amount=2)
+w.transfer(dest="ckkziizhrki", amount=3)
 sleep(40)
 
 n1.logging(n1.ledger)

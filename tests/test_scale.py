@@ -23,7 +23,7 @@ miners[0].genesis()
 
 # Création d'un portefeuille
 port += 1
-wallet = Wallet("localhost", port, "localhost", 8000)
+wallet = Wallet("./wallet.bin", "localhost", port, "localhost", 8000)
 
 def pseudo(size=16):
     alpha = [chr(i) for i in range(97, 123)]
@@ -31,7 +31,7 @@ def pseudo(size=16):
 
 # Soumission de 21 transactions aléatoires
 for _ in range(21):
-    wallet.transact(exp=pseudo(), dest=pseudo(), amount=random.randint(1, 10))
+    wallet.transfer(dest=pseudo(), amount=random.randint(1, 10))
 
 # Le minage dure environ 3 minutes pour 21 / 3 = 7 blocs
 sleep(3 * 60)
