@@ -221,9 +221,9 @@ class Node:
         Les champs "host" et "port" indiquant l'expéditeur sont automatiquement
         ajoutés au corps du paquet.
 
-        :param body: Objet Python sérialiable en JSON.
         :param remote_host: Adresse du noeud auquel envoyer le paquet.
         :param remote_port: Port associé à cette adresse.
+        :param body: Objet Python sérialiable en JSON.
         """
         pck = {"header": "PRIVATE", "host": self.host, "port": self.port, "body": body}
         send(remote_host, remote_port, pck)

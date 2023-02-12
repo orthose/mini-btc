@@ -1,6 +1,7 @@
 import threading, random
 from mini_btc import FullNode
-from mini_btc.utils import sha256, json_decode
+from mini_btc import Transaction
+from mini_btc.utils import sha256, address_from_publickey
 from typing import List
 
 
@@ -9,7 +10,7 @@ class Miner(FullNode):
     Noeud de la BlockChain capable de miner des blocs.
     C'est une extension de FullNode.
     """
-    def __init__(self, listen_host: str, listen_port: int,
+    def __init__(self, pubkey: str, listen_host: str, listen_port: int,
         remote_host: str = None, remote_port: int = None, max_nodes: int = 10,
         block_size: int = 3, difficulty: int = 5):
         """
@@ -19,6 +20,7 @@ class Miner(FullNode):
         préexistant. Si c'est le premier alors il n'y a pas besoin de préciser
         de noeud auquel se connecter.
 
+        :param pubkey: Clé publique pour la récompense de minage.
         :param listen_host: Adresse d'écoute noeud.
         :param listen_port: Port associé à cette adresse.
         :param remote_host: Adresse du noeud auquel se connecter.
@@ -32,6 +34,7 @@ class Miner(FullNode):
         super().__init__(listen_host, listen_port, remote_host, remote_port,
             max_nodes, block_size, difficulty)
 
+        self.pubkey = pubkey
         self.is_mining = False
         self.mining_cond = threading.Condition()
 
@@ -73,7 +76,7 @@ class Miner(FullNode):
 
         :param block: Bloc à miner.
         """
-        while self.is_mining and not self._check_block(block):
+        while self.is_mining and not self._check_block(block, check_tx=False):
             block["nonce"] += 1
 
     def __mine_routine(self):
@@ -87,38 +90,58 @@ class Miner(FullNode):
         while True:
             with self.mining_cond:
                 # On démarre le minage si on a reçu suffisamment de transactions
-                while len(self.buf_trans) < self.block_size:
+                while len(self.buf_trans) < self.block_size-1:
                     # Attente passive
                     self.mining_cond.wait()
 
+            # Sélection aléatoire des transactions candidates
+            trans = []
+            invalid_trans = set()
+            for tx in self.buf_trans:
+                # La transaction est-elle valide ?
+                if self.check_tx(tx):
+                    trans.append(tx.to_dict())
+                else:
+                    invalid_trans.add(tx)
+                # Suffisamment de transactions valides ?
+                if len(trans) == self.block_size-1: break
+
+            # Suppression des transactions invalides
+            super()._delete_trans(invalid_trans)
+
             # Activation du minage
-            self.is_mining = True
+            if len(trans) == self.block_size-1:
+                self.is_mining = True
+            else: continue
+
+            #trans = random.sample(self.buf_trans, self.block_size-1)
+            #trans = [tx.to_dict() for tx in trans]
+
+            # Récompense de minage de 50 BTC
+            reward_tx = Transaction()
+            address = address_from_publickey(self.pubkey)
+            lock = f"{self.pubkey} CHECKSIG"
+            reward_tx.add_output(address, 50, lock)
+            trans.append(reward_tx.to_dict())
 
             # Construction d'un bloc à miner
-            trans = random.sample(self.buf_trans, self.block_size)
-            encoded_trans = trans.copy()
-            decoded_trans = [json_decode(x) for x in trans]
             block = {
                 "index": len(self.ledger),
                 "hash": None if len(self.ledger) == 0 else sha256(self.ledger[-1]),
                 "nonce": random.randint(0, 1_000_000_000),
-                "trans": decoded_trans
+                "trans": trans
             }
 
             # Minage du bloc
             self.__mine(block)
 
-            # Si on croit avoir gagné la compétition on soumet le bloc
+            # Si on croit avoir gagné la compétition
             if self.is_mining:
-                self.lock_ledger.acquire()
-                if self._check_block(block) and self._check_chain(block):
-                    # Enregistrement du bloc dans le registre
-                    self.ledger.append(block)
-                    # On retire les transactions utilisées du buffer
-                    super()._delete_trans(encoded_trans)
+                # Enregistrement du bloc dans le registre
+                if self._add_block(block):
                     # Soumission du bloc
                     self.submit_block(block)
-                self.lock_ledger.release()
+                self.is_mining = False
 
     def submit_block(self, block: object):
         """
@@ -138,5 +161,5 @@ class Miner(FullNode):
         block = {"index": 0, "hash": None, "nonce": 0, "trans": tx}
         self.is_mining = True
         self.__mine(block)
-        self.ledger.append(block)
-        self.submit_block(block)
+        if self._add_block(block):
+            self.submit_block(block)

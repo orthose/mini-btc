@@ -146,6 +146,18 @@ def dsa_publickey(private_key: DSA.DsaKey) -> Tuple[str, str]:
     return public_key, address
 
 
+def address_from_publickey(public_key: str) -> str:
+    """
+    Donne l'adresse associée à une clé publique.
+
+    :param public_key: Clé publique sous forme d'une chaîne de caractères.
+    :return: L'adresse sous forme d'une chaîne de caractères.
+    """
+    public_key = b58decode(public_key.encode("utf-8"))
+    address = b58encode(SHA256.new(public_key).digest()).decode('utf-8')
+    return address
+
+
 def dsa_sign(private_key: DSA.DsaKey, data: object) -> str:
     """
     Permet de signer une transaction en cryptant son hash avec la clé privée.

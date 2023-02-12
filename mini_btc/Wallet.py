@@ -1,7 +1,8 @@
+from mini_btc.utils import \
+    dsa_generate, dsa_export, dsa_import, \
+    dsa_publickey, address_from_publickey, dsa_sign
 from mini_btc import Node
-import Crypto.Random
-from Crypto.PublicKey import RSA
-from mini_btc.utils import rsa_publickey
+from mini_btc import Transaction
 from typing import Tuple
 
 
@@ -21,23 +22,23 @@ class Wallet(Node):
         """
         super().__init__(listen_host, listen_port, remote_host, remote_port, max_nodes=1)
         self._import(wallet_file)
+        self.utxo = []
 
     @staticmethod
-    def create(output_file: str):
+    def create(wallet_file: str):
         """
         Création d'un nouveau porte-feuille. On génère une clé privée RSA aléatoire.
         La méthode est simplifiée par rapport au bitcoin.
 
-        :param output_file: Fichier où stocker la clé privée en binaire.
+        :param wallet_file: Fichier où stocker la clé privée en binaire.
         """
-        private_key = RSA.generate(1024, Crypto.Random.new().read)
-        public_key, address = rsa_publickey(private_key)
+        private_key = dsa_generate()
+        public_key, address = dsa_publickey(private_key)
 
         print(f"Address: {address}")
         print(f"Public Key: {public_key}")
 
-        with open(output_file, 'wb') as f:
-            f.write(private_key.exportKey("DER"))
+        dsa_export(private_key, wallet_file)
 
     def _import(self, wallet_file: str):
         """
@@ -45,9 +46,11 @@ class Wallet(Node):
 
         :param wallet_file: Chemin du fichier de la clé privée.
         """
-        with open(wallet_file, 'rb') as f:
-            self._private_key = RSA.importKey(f.read())
-        self.public_key, self.address = rsa_publickey(self._private_key)
+        self._private_key = dsa_import(wallet_file)
+        self.public_key, self.address = dsa_publickey(self._private_key)
+
+        print(f"Address: {self.address}")
+        print(f"Public Key: {self.public_key}")
 
     def connect(self):
         """
@@ -56,14 +59,95 @@ class Wallet(Node):
         """
         pass
 
-    def transfer(self, dest: str, amount: int):
+    def _private_callback(self, host: str, port: int, body: object):
+        """
+        Fonction appelée sur le corps d'un paquet privé.
+        Cette fonction peut être personnalisée par héritage.
+
+        :param host: Adresse du noeud expéditeur.
+        :param port: Port associée à cette adresse.
+        :param body: Objet Python du corps du paquet.
+        """
+        # Mise à jour des UTXO du porte-feuille
+        if "BALANCE" == body["request"]:
+            self.utxo = body["utxo"]
+
+    def update_balance(self):
+        """
+        Demande au noeud les UTXO appartenant à l'adresse du porte-feuille
+        pour mettre à jour le solde. Requête asynchrone.
+        """
+        remote_host, remote_port = list(self.nodes)[0]
+        req = {"request": "GET_BALANCE", "address": self.address}
+        self.send(remote_host, remote_port, req)
+
+    def get_balance(self) -> int:
+        """
+        Donne le solde actuel connu par le porte-feuille.
+        Pour mettre à jour le solde il faut appeler au préalable update_balance.
+
+        :return: Entier du solde.
+        """
+        res = 0
+        for tx in self.utxo:
+            index = Transaction(tx).find_utxo(self.address)
+            if index > -1:
+                res += tx["output"][index]["value"]
+        return res
+
+    def transfer(self, dest_pubkey: str, value: int) -> bool:
         """
         Soumission d'une transaction au réseau.
-        Note: Dans la réalité il faudrait travailler avec de la cryptographie
-        symétrique. Ici on ne le fait pas par souci de simplification.
 
-        :param dest: Adresse du destinataire.
-        :param amount: Montant de la transaction.
+        :param dest_pubkey: Clé publique du destinataire.
+        :param value: Montant de la transaction.
+        :return: True si la transaction a été envoyée False sinon.
         """
-        req = {"request": "TRANSACT", "from": self.address, "to": dest, "amount": amount}
+        # Le transfert est abandonné si pas de UTXO
+        if len(self.utxo) == 0: return False
+
+        tx = Transaction()
+        input_value = 0; i = 0
+        while input_value < value and i < len(self.utxo):
+            utxo = self.utxo[i]
+            index = Transaction(utxo).find_utxo(self.address)
+            hash = utxo.pop("hash")
+            sign = dsa_sign(self._private_key, utxo)
+            tx.add_input(prevTxHash=hash, index=index, unlock=sign)
+            input_value += utxo["output"][index]["value"]
+
+        # Le solde est-il suffisant ?
+        if input_value < value: return False
+
+        # Suppression des UTXO consommées
+        self.utxo = self.utxo[i+1:]
+
+        # UTXO pour le destinataire
+        lock = f"{dest_pubkey} CHECKSIG"
+        tx.add_output(address=address_from_publickey(dest_pubkey), value=value, lock=lock)
+
+        # Je me rembourse
+        input_value -= value
+        if input_value > 0:
+            lock = f"{self.public_key} CHECKSIG"
+            tx.add_output(address=address_from_publickey(self.public_key), value=input_value, lock=lock)
+
+        req = {"request": "TRANSACT", "tx": tx.to_dict()}
+        self.logging(req)
         self.broadcast(req)
+
+        return True
+
+    def empty_transfer(self) -> bool:
+        """
+        Soumission d'une transaction vide.
+        Permet de lancer le minage du premier bloc.
+
+        :return: True si la transaction a été envoyée False sinon.
+        """
+        tx = Transaction()
+        req = {"request": "TRANSACT", "tx": tx.to_dict()}
+        self.logging(req)
+        self.broadcast(req)
+
+        return True

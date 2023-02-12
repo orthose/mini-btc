@@ -1,6 +1,9 @@
 import threading
 from mini_btc import Node
-from mini_btc.utils import json_encode, sha256, send
+from mini_btc.utils import sha256, send
+from mini_btc import Transaction
+from mini_btc.script import execute
+from typing import Union
 
 
 class FullNode(Node):
@@ -35,10 +38,12 @@ class FullNode(Node):
         # Registre pour stocker la liste de blocs
         self.ledger = []
         self.lock_ledger = threading.Lock()
-
-        # Tampon de transactions
-        self.buf_trans = set()
         self.block_size = block_size
+
+        # Tampon des transactions candidates (à inclure dans les prochains blocs)
+        self.buf_trans = set()
+        # Transactions non-dépensées par adresse
+        self.utxo = dict()
 
         assert difficulty > 0
         self.difficulty = difficulty
@@ -60,8 +65,7 @@ class FullNode(Node):
         # Traitement d'une transaction
         if "TRANSACT" == body["request"]:
             body.pop("request")
-            body["id"] = id
-            self.buf_trans.add(json_encode(body))
+            self.buf_trans.add(Transaction(body["tx"]))
             self._transact_callback(host, port, body)
 
         # Soumission d'un bloc résolu
@@ -69,22 +73,14 @@ class FullNode(Node):
             block = body["block"]
 
             # Le bloc est-il valide ?
-            if self._check_block(block):
+            if self._check_block(block, check_tx=False):
                 k = block["index"] # 0-based
                 n = len(self.ledger)
 
                 # En retard de 1 bloc
                 if k == n:
-                    # Le bloc proposé suit-il le dernier bloc ?
-                    self.lock_ledger.acquire()
-
-                    if self._check_chain(block):
-                        self.ledger.append(block)
-
-                        # Suppression des transactions déjà traitées
-                        self._delete_trans({json_encode(tx) for tx in block["trans"]})
-
-                    self.lock_ledger.release()
+                    # Ajout du bloc au registre
+                    self._add_block(block)
 
                 # En retard de plus de 1 bloc
                 elif k > n:
@@ -114,20 +110,21 @@ class FullNode(Node):
         # Réception de blocs résolus
         # Un noeud qui se connecte plus tard peut récupérer toute la blockchain
         elif "LIST_BLOCKS" == body["request"]:
-            new_tx = set()
-            old_tx = set()
-
             # Il faut au moins un bloc reçu
             if len(body["blocks"]) == 0:
                 return
 
             # Récupération des anciennes transactions
+            old_tx = set()
             for block in self.ledger:
-                old_tx.update({json_encode(tx) for tx in block["trans"]})
+                old_tx.update({Transaction(tx) for tx in block["trans"]})
+            # Ajout des anciennes transactions libérées
+            self.buf_trans.update(old_tx)
 
             self.lock_ledger.acquire()
 
             # Suppression du registre actuel
+            # Le premier bloc genesis est particulier: il ne faut pas vérifier le chaînage
             block = body["blocks"][0]
             if not self._check_block(block):
                 return
@@ -136,20 +133,17 @@ class FullNode(Node):
             # Reconstruction du registre
             # On suppose que les blocs sont bien ordonnés
             for block in body["blocks"][1:]:
-                # Le bloc est-il valide et complète-il la blockchain ?
-                if not (self._check_block(block) and self._check_chain(block)):
-                    break
-
-                self.ledger.append(block)
-                new_tx.update({json_encode(tx) for tx in block["trans"]})
+                # Ajout du bloc au registre
+                if not self._add_block(block, lock=False): break
 
             self.lock_ledger.release()
 
-            # Ajout des anciennes transactions libérées
-            self.buf_trans.update(old_tx)
-
-            # Suppression des transactions déjà traitées
-            self._delete_trans(new_tx)
+        # Demande de la somme d'argent détenue par une adresse
+        elif "GET_BALANCE" == body["request"]:
+            address = body["address"]
+            utxo = [tx.to_dict() for tx in self.utxo[address]] if address in self.utxo else []
+            req = {"request": "BALANCE", "address": address, "utxo": utxo}
+            super().send(host, port, req)
 
     def _delete_trans(self, trans: set):
         """
@@ -169,11 +163,12 @@ class FullNode(Node):
         """
         pass
 
-    def _check_block(self, block: object) -> bool:
+    def _check_block(self, block: object, check_tx: bool = True) -> bool:
         """
         Vérifie si un bloc est valide.
 
         :param block: Objet Python du bloc à vérifier.
+        :param check_tx: Si True vérifie les transactions du bloc.
         :return: True si valide False sinon.
         """
         # Les champs du bloc sont-ils tous renseignés ?
@@ -183,9 +178,22 @@ class FullNode(Node):
         # Le hash du bloc comprend-il difficulty 0 au début ?
         res = res and '0' * self.difficulty == sha256(block)[0:self.difficulty]
 
-        # Il faudrait également vérifier que les transactions proposées
-        # ne sont pas encore consommées
+        # Les transactions sont-elles valides ?
+        if check_tx:
+            # On accepte une seule transaction récompense par bloc
+            reward_utxo = False
+            for tx in block["trans"]:
+                tx = Transaction(tx)
 
+                # Transaction récompense
+                if len(tx.input) == 0 and len(tx.output) == 1:
+                    # La transaction récompense est-elle valide ?
+                    if reward_utxo or tx.output[0]["value"] > 50: return False
+                    else: reward_utxo = True
+
+                # Transaction classique
+                else:
+                    res = res and self.check_tx(tx)
         return res
 
     def _check_chain(self, block: object) -> bool:
@@ -196,3 +204,87 @@ class FullNode(Node):
         :return: True si valide False sinon.
         """
         return len(self.ledger) == 0 or sha256(self.ledger[-1]) == block["hash"]
+
+    def find_tx(self, txHash: str) -> Union[Transaction, None]:
+        """
+        Recherche une transaction dans le registre.
+
+        :param txHash: Hash de la transaction.
+        :return: Transaction correspondante None si absente.
+        """
+        for block in self.ledger:
+            for tx in block["trans"]:
+                if txHash == tx["hash"]:
+                    return Transaction(tx)
+        return None
+
+    def check_tx(self, tx: Transaction) -> bool:
+        """
+        Vérifie si une transaction est valide.
+
+        On ne vérifie pas si la transaction est dans le tampon des transactions
+        candidates au cas où le noeud ne l'ait pas reçu.
+
+        On ne valide pas les transactions de récompense de minage.
+        Ces transactions spéciales sont validées au niveau de self._check_block.
+
+        :param tx: Transaction à vérifier.
+        :return: True si valide False sinon.
+        """
+        # Transaction vide
+        if len(tx.input) == 0 and len(tx.output) == 0: return True
+
+        # Transaction classique
+        input_value = 0
+        # Les entrées sont-elles valides ?
+        for intx in tx.input:
+            prev_tx = self.find_tx(intx["prevTxHash"])
+            # La transaction consommée existe-t-elle dans le registre ?
+            if prev_tx is None: return False
+
+            utxo = prev_tx.output[intx["index"]]
+            # La UTXO a-t-elle déjà été consommée ?
+            if prev_tx not in self.utxo[utxo["address"]]: return False
+
+            # Le déverrouillage a-t-il échoué ?
+            if execute(intx["unlock"], utxo["lock"], prev_tx) == "false": return False
+            input_value += utxo["value"]
+
+        # La somme en entrée est-elle égale à la somme en sortie ?
+        output_value = sum([utxo["value"] for utxo in tx.output])
+
+        # La contrainte d'unicité des adresses en sortie est-elle respectée ?
+        nunique = len({utxo["address"] for utxo in tx.output})
+
+        return input_value == output_value and nunique == len(tx.output)
+
+    def _add_block(self, block: object, lock: bool = True) -> bool:
+        """
+        Ajoute un bloc au registre s'il est valide.
+
+        :param block: Bloc à ajouter au registre.
+        :param lock: Verrouillage du registre si True.
+        :return: True si le bloc a été ajouté False sinon.
+        """
+        if lock: self.lock_ledger.acquire()
+
+        # Le bloc est-il valide et suit-il le dernier bloc du registre ?
+        res = self._check_block(block) and self._check_chain(block)
+        if res:
+            # Ajout du bloc au registre
+            self.ledger.append(block)
+
+            for tx in block["trans"]:
+                # Mise à jour des UTXO
+                for utxo in tx["output"]:
+                    address = utxo["address"]
+                    if address not in self.utxo:
+                        self.utxo[address] = set()
+                    self.utxo[address].add(Transaction(tx))
+
+            # Suppression des transactions candidates
+            self._delete_trans({Transaction(tx) for tx in block["trans"]})
+
+        if lock: self.lock_ledger.release()
+
+        return res
