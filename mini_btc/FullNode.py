@@ -275,14 +275,23 @@ class FullNode(Node):
             self.ledger.append(block)
 
             for tx in block["trans"]:
-                # Mise à jour des UTXO
+                # Suppression des UTXO consommées
+                for intx in tx["input"]:
+                    index = intx["index"]
+                    intx = self.find_tx(intx["prevTxHash"])
+                    if intx is not None:
+                        address = intx.output[index]["address"]
+                        # KeyError possible
+                        self.utxo[address].remove(intx)
+
+                # Enregistrement des UTXO créées
                 for utxo in tx["output"]:
                     address = utxo["address"]
                     if address not in self.utxo:
                         self.utxo[address] = set()
                     self.utxo[address].add(Transaction(tx))
 
-            # Suppression des transactions candidates
+            # Suppression des transactions candidates traitées
             self._delete_trans({Transaction(tx) for tx in block["trans"]})
 
         if lock: self.lock_ledger.release()
