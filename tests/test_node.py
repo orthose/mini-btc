@@ -21,8 +21,8 @@ n1.logging(n1.nodes)
 n2.logging(n2.nodes)
 n3.logging(n3.nodes)
 
-# Diffusion d'une requête sur le réseau
-req = {"request": "TRANSACT", "from": "Alice", "to": "Bob", "amount": "1"}
+# Diffusion d'une transaction vide sur le réseau
+req = {'request': 'TRANSACT', 'tx': {'locktime': 1676235668.405151, 'input': [], 'output': [], 'hash': '4b22550a32452d9b6d7e7f82d2a2015c0083b289e1fadb538c9f868b0e6d9b4e'}}
 n1.broadcast(req)
 sleep(1)
 
@@ -32,9 +32,7 @@ del n1
 sleep(1)
 
 # Diffusion d'une requête sur le réseau
-req["from"] = "Bob"
-req["to"] = "Alice"
-req["amount"] = 2
+req = {'request': 'TRANSACT', 'tx': {'locktime': 1676235617.8596997, 'input': [], 'output': [], 'hash': '1c060157e9af77b5dcf6d75efbfde7237fc05c9b423afada0ce2e7280790e964'}}
 n2.broadcast(req)
 sleep(1)
 
@@ -42,5 +40,5 @@ n2.logging(n2.nodes)
 n3.logging(n3.nodes)
 
 # Envoi d'un paquet privé de n2 vers n3
-req = {"request": "GET_BLOCKS", "start": 5}
+req = {"request": "GET_BLOCKS"}
 n2.send("localhost", 8002, req)
