@@ -9,7 +9,8 @@ class Node:
     Les communications utilisent des sockets temporaires unidirectionnels.
     """
     def __init__(self, listen_host: str, listen_port: int,
-        remote_host: str = None, remote_port: int = None, max_nodes: int = 10):
+        remote_host: str = None, remote_port: int = None, max_nodes: int = 10,
+        verbose: int = 2):
         """
         Lorsque un noeud est créé il doit se connecter à un noeud du réseau.
         préexistant. Si c'est le premier alors il n'y a pas besoin de préciser
@@ -20,10 +21,14 @@ class Node:
         :param remote_host: Adresse du noeud auquel se connecter.
         :param remote_port: Port associé à cette adresse.
         :param max_nodes: Nombre maximum de voisins actifs à conserver.
+        :param verbose: Niveau de verbosité entre 0 et 2.
         """
         self.host = listen_host
         self.port = listen_port
         self.name = f"{self.host}:{self.port}"
+
+        assert verbose in [0, 1, 2]
+        self.verbose = verbose
 
         # Identifiants des paquets reçus
         self.packet_ids = set()
@@ -107,7 +112,17 @@ class Node:
         # Réception du paquet
         pck = recv(sock)
         sock.close()
-        self.logging(pck)
+
+        if self.verbose == 1:
+            log = pck["header"]
+            if "host" in pck and "port" in pck:
+                log += f" from {pck['host']}:{pck['port']}"
+            if "body" in pck and "request" in pck["body"]:
+                log += f" {pck['body']['request']}"
+            self.logging(log)
+
+        elif self.verbose == 2:
+            self.logging(pck)
 
         # Demande de connexion au réseau
         if "CONNECT" == pck["header"]:

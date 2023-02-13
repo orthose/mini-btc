@@ -13,7 +13,7 @@ class FullNode(Node):
     """
     def __init__(self, listen_host: str, listen_port: int,
         remote_host: str = None, remote_port: int = None, max_nodes: int = 10,
-        block_size: int = 3, difficulty: int = 5):
+        block_size: int = 3, difficulty: int = 5, verbose: int = 2):
         """
         Création d'un noeud appartenant à la BlockChain.
 
@@ -30,10 +30,11 @@ class FullNode(Node):
         :param difficulty: Difficulté du challenge de minage correspondant
         au nombre de 0 attendus en début de hash. Plus ce nombre est élevé
         plus la difficulté est grande.
+        :param verbose: Niveau de verbosité entre 0 et 2.
         """
         # Création du noeud la couche pair à pair
         super().__init__(listen_host, listen_port, remote_host, remote_port,
-            max_nodes)
+            max_nodes, verbose)
 
         # Registre pour stocker la liste de blocs
         self.ledger = []

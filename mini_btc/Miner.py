@@ -12,7 +12,7 @@ class Miner(FullNode):
     """
     def __init__(self, pubkey: str, listen_host: str, listen_port: int,
         remote_host: str = None, remote_port: int = None, max_nodes: int = 10,
-        block_size: int = 3, difficulty: int = 5):
+        block_size: int = 3, difficulty: int = 5, verbose: int = 2):
         """
         Création d'un mineur appartenant à la BlockChain.
 
@@ -30,9 +30,10 @@ class Miner(FullNode):
         :param difficulty: Difficulté du challenge de minage correspondant
         au nombre de 0 attendus en début de hash. Plus ce nombre est élevé
         plus la difficulté est grande.
+        :param verbose: Niveau de verbosité entre 0 et 2.
         """
         super().__init__(listen_host, listen_port, remote_host, remote_port,
-            max_nodes, block_size, difficulty)
+            max_nodes, block_size, difficulty, verbose)
 
         self.pubkey = pubkey
         self.is_mining = False
@@ -76,8 +77,12 @@ class Miner(FullNode):
 
         :param block: Bloc à miner.
         """
+        if 0 < self.verbose: self.logging("START MINING...")
+
         while self.is_mining and not self._check_block(block, check_tx=False):
             block["nonce"] += 1
+
+        if 0 < self.verbose: self.logging("...STOP MINING")
 
     def __mine_routine(self):
         """
@@ -114,9 +119,6 @@ class Miner(FullNode):
                 self.is_mining = True
             else: continue
 
-            #trans = random.sample(self.buf_trans, self.block_size-1)
-            #trans = [tx.to_dict() for tx in trans]
-
             # Récompense de minage de 50 BTC
             reward_tx = Transaction()
             address = address_from_publickey(self.pubkey)
@@ -139,6 +141,7 @@ class Miner(FullNode):
             if self.is_mining:
                 # Enregistrement du bloc dans le registre
                 if self._add_block(block):
+                    if 0 < self.verbose: self.logging("!!! BLOCK FOUND !!!")
                     # Soumission du bloc
                     self.submit_block(block)
                 self.is_mining = False

@@ -35,11 +35,12 @@ parser.add_argument("-rh", "--remote-host", dest="remote_host", type=str,
 parser.add_argument("-rp", "--remote-port", dest="remote_port", type=int,
     required=True, help="Port d'écoute du noeud auquel se connecter requis.")
 
+parser.add_argument("-v", "--verbose", dest="verbose", type=int, default=0,
+    help="Niveau de verbosité entre 0 et 2.")
+
 args = parser.parse_args()
 
-print(args)
-print("Bienvenue sur le porte-feuille Mini BTC.")
-print("Tapez help pour connaître la liste des commandes.")
+print(args, end="\n\n")
 
 wallet_file = args.wallet_file
 
@@ -55,8 +56,11 @@ if wallet_file is None:
 
 # Chargement du porte-feuille
 wallet = Wallet(wallet_file, args.listen_host, args.listen_port,
-                args.remote_host, args.remote_port)
+                args.remote_host, args.remote_port, args.verbose)
 wallet.start()
+
+print("\nBienvenue sur le porte-feuille Mini BTC.")
+print("Tapez help pour voir la liste des commandes.\n")
 
 # Exécution des commandes
 while True:

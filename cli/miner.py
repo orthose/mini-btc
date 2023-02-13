@@ -30,10 +30,13 @@ parser.add_argument("-bs", "--block-size", dest="block_size", type=int,
 parser.add_argument("-d", "--difficulty", dest="difficulty", type=int,
     default=5, help="Difficulté du minage par défaut 5.")
 
+parser.add_argument("-v", "--verbose", dest="verbose", type=int, default=1,
+    help="Niveau de verbosité entre 0 et 2.")
+
 args = parser.parse_args()
 print(args)
 
 miner = Miner(args.pubkey, args.listen_host, args.listen_port,
               args.remote_host, args.remote_port,
-              args.max_nodes, args.block_size, args.difficulty)
+              args.max_nodes, args.block_size, args.difficulty, args.verbose)
 miner.start()

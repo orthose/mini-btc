@@ -12,15 +12,17 @@ class Wallet(Node):
     ATTENTION: Le Wallet doit être connecté à un FullNode ou un Miner.
     """
     def __init__(self, wallet_file: str, listen_host: str, listen_port: int,
-        remote_host, remote_port: int):
+        remote_host, remote_port: int, verbose: int = 2):
         """
         :param wallet_file: Chemin du fichier de la clé privée du porte-feuille.
         :param listen_host: Adresse d'écoute du wallet.
         :param listen_port: Port associé à cette adresse.
         :param remote_host: Adresse du noeud auquel se connecter.
         :param remote_port: Port associé à cette adresse.
+        :param verbose: Niveau de verbosité entre 0 et 2.
         """
-        super().__init__(listen_host, listen_port, remote_host, remote_port, max_nodes=1)
+        super().__init__(listen_host, listen_port, remote_host, remote_port,
+            max_nodes=1, verbose=verbose)
         self._import(wallet_file)
         self.utxo = []
 
@@ -133,7 +135,7 @@ class Wallet(Node):
             tx.add_output(address=address_from_publickey(self.public_key), value=input_value, lock=lock)
 
         req = {"request": "TRANSACT", "tx": tx.to_dict()}
-        self.logging(req)
+        if self.verbose == 2: self.logging(req)
         self.broadcast(req)
 
         return True
@@ -147,7 +149,7 @@ class Wallet(Node):
         """
         tx = Transaction()
         req = {"request": "TRANSACT", "tx": tx.to_dict()}
-        self.logging(req)
+        if self.verbose == 2: self.logging(req)
         self.broadcast(req)
 
         return True
