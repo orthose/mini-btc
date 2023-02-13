@@ -4,7 +4,17 @@ import argparse
 
 help = \
 """
-TODO
+* help: Affiche la liste des commandes disponibles.
+
+* update_balance: Met à jour les UTXO du porte-feuille.
+
+* get_balance: Affiche le solde du porte-feuille.
+Note: Mettre à jour les UTXO au préalable.
+
+* transfer <pubkey> <value>: Transfère la somme <value> à <pubkey>.
+Note: Mettre à jour les UTXO avant et après le transfert.
+
+* exit: Quitte le porte-feuille.
 """
 
 parser = argparse.ArgumentParser(
@@ -27,8 +37,9 @@ parser.add_argument("-rp", "--remote-port", dest="remote_port", type=int,
 
 args = parser.parse_args()
 
-print("Bienvenue sur le porte-feuille Mini BTC.")
 print(args)
+print("Bienvenue sur le porte-feuille Mini BTC.")
+print("Tapez help pour connaître la liste des commandes.")
 
 wallet_file = args.wallet_file
 
@@ -36,7 +47,7 @@ if wallet_file is None:
     qst = "Avez-vous déjà un porte-feuille (Y/n) ? "
     while (rsp := input(qst).lower()) not in ['', 'y', 'n']: continue
 
-    wallet_file = input("Choisissez un nom de fichier: ")
+    wallet_file = input("Nom de fichier: ")
 
     # Création d'un porte-feuille
     if rsp == 'n':
@@ -51,6 +62,7 @@ wallet.start()
 while True:
     cmd = input('> ').split()
 
+    # Saut de ligne
     if len(cmd) == 0: continue
 
     elif "help" == cmd[0] and len(cmd) == 1:
@@ -67,7 +79,6 @@ while True:
         # Transaction vide
         if len(cmd) == 1:
             success = wallet.empty_transfer()
-
         # Transaction classique
         else:
             success = wallet.transfer(dest_pubkey=cmd[1], value=int(cmd[2]))
