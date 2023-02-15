@@ -6,7 +6,7 @@ import random
 # Chargement du porte-feuille de Alice
 alice = Wallet("./wallets/alice.bin", "localhost", 8000, "localhost", 8001, verbose=0)
 # La récompense de minage de 50 BTC va à Alice
-alice_pubkey = alice.public_key
+alice_pubkey = alice.pubkey
 
 # Création de 5 mineurs
 port = 8001
@@ -32,7 +32,7 @@ for _ in range(32):
 
 # Création d'un mineur se connectant en retard pour tester LIST_BLOCKS
 # Il ne pourra pas miner parce qu'il n'a pas reçu les transactions
-sleep(10) 
+sleep(10)
 port += 1
 miners.append(Miner(alice_pubkey, "localhost", port, "localhost", 8001, difficulty=4, verbose=1))
 miners[-1].start()

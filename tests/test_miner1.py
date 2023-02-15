@@ -3,20 +3,20 @@ from time import sleep
 
 
 # Chargement des porte-feuilles
-alice = Wallet("./wallets/alice.bin", "localhost", 8003, "localhost", 8000)
+alice = Wallet("./wallets/alice.bin", "localhost", 8003, "localhost", 8000, verbose=1)
 # La récompense de minage ira à Alice
 # Donc à chaque bloc miné elle gagne forcément 50 BTC
-alice_pubkey = alice.public_key
+alice_pubkey = alice.pubkey
 
-bob = Wallet("./wallets/bob.bin", "localhost", 8004, "localhost", 8001)
-bob_pubkey = bob.public_key
+bob = Wallet("./wallets/bob.bin", "localhost", 8004, "localhost", 8001, verbose=1)
+bob_pubkey = bob.pubkey
 
 # Le premier noeud n'est connecté à aucun autre
-n1 = Miner(alice_pubkey, "localhost", 8000, difficulty=4)
+n1 = Miner(alice_pubkey, "localhost", 8000, difficulty=4, verbose=1)
 # Le deuxième noeud est connecté au premier
-n2 = Miner(alice_pubkey, "localhost", 8001, remote_host="localhost", remote_port=8000, difficulty=4)
+n2 = Miner(alice_pubkey, "localhost", 8001, remote_host="localhost", remote_port=8000, difficulty=4, verbose=1)
 # Le troisième noeud est aussi connecté au premier
-n3 = Miner(alice_pubkey, "localhost", 8002, remote_host="localhost", remote_port=8000, difficulty=4)
+n3 = Miner(alice_pubkey, "localhost", 8002, remote_host="localhost", remote_port=8000, difficulty=4, verbose=1)
 
 # Démarrage des noeuds
 n1.start(); sleep(1)
@@ -31,10 +31,6 @@ bob.start(); sleep(1)
 # Pour lancer le minage on envoie des transactions vides
 alice.empty_transfer(); sleep(1)
 alice.empty_transfer(); sleep(10)
-
-n1.logging(n1.ledger)
-n2.logging(n2.ledger)
-n3.logging(n3.ledger)
 
 # Vérification du solde de Alice et Bob
 alice.update_balance(); sleep(1)

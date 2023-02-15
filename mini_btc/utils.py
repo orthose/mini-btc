@@ -106,19 +106,19 @@ def dsa_generate(size=1024) -> DSA.DsaKey:
     :param size: Taille de la clé.
     :return: Clé privée secrète.
     """
-    private_key = DSA.generate(size)
-    return private_key
+    privkey = DSA.generate(size)
+    return privkey
 
 
-def dsa_export(private_key: DSA.DsaKey, key_file: str):
+def dsa_export(privkey: DSA.DsaKey, key_file: str):
     """
     Exporte une clé privée dans un fichier binaire.
 
-    :param private_key: Clé privée secrète.
+    :param privkey: Clé privée secrète.
     :param key_file: Chemin du fichier de sortie.
     """
     with open(key_file, 'wb') as f:
-        f.write(private_key.export_key("DER"))
+        f.write(privkey.export_key("DER"))
 
 
 def dsa_import(key_file: str) -> DSA.DsaKey:
@@ -132,57 +132,57 @@ def dsa_import(key_file: str) -> DSA.DsaKey:
         return DSA.import_key(f.read())
 
 
-def dsa_publickey(private_key: DSA.DsaKey) -> Tuple[str, str]:
+def dsa_pubkey(privkey: DSA.DsaKey) -> Tuple[str, str]:
     """
     Permet d'obtenir la clé publique et l'adresse à partir de la clé privée.
     Elles sont encodées en base 58.
 
-    :param private_key: Clé privée secrète.
+    :param privkey: Clé privée secrète.
     :return: Le couple clé publique, adresse.
     """
-    public_key = private_key.publickey().export_key("DER")
-    address = b58encode(SHA256.new(public_key).digest()).decode('utf-8')
-    public_key = b58encode(public_key).decode('utf-8')
-    return public_key, address
+    pubkey = privkey.publickey().export_key("DER")
+    address = b58encode(SHA256.new(pubkey).digest()).decode('utf-8')
+    pubkey = b58encode(pubkey).decode('utf-8')
+    return pubkey, address
 
 
-def address_from_publickey(public_key: str) -> str:
+def address_from_pubkey(pubkey: str) -> str:
     """
     Donne l'adresse associée à une clé publique.
 
-    :param public_key: Clé publique sous forme d'une chaîne de caractères.
+    :param pubkey: Clé publique sous forme d'une chaîne de caractères.
     :return: L'adresse sous forme d'une chaîne de caractères.
     """
-    public_key = b58decode(public_key.encode("utf-8"))
-    address = b58encode(SHA256.new(public_key).digest()).decode('utf-8')
+    pubkey = b58decode(pubkey.encode("utf-8"))
+    address = b58encode(SHA256.new(pubkey).digest()).decode('utf-8')
     return address
 
 
-def dsa_sign(private_key: DSA.DsaKey, data: object) -> str:
+def dsa_sign(privkey: DSA.DsaKey, data: object) -> str:
     """
     Permet de signer une transaction en cryptant son hash avec la clé privée.
 
-    :param private_key: Clé privée secrète.
+    :param privkey: Clé privée secrète.
     :param data: Données à hacher.
     :return: Chaîne encryptée du hash.
     """
     hash = SHA256.new(json_encode(data))
-    return hexlify(DSS.new(private_key, 'fips-186-3').sign(hash)).decode("utf-8")
+    return hexlify(DSS.new(privkey, 'fips-186-3').sign(hash)).decode("utf-8")
 
 
-def dsa_verify(public_key: str, sign: str, data: object) -> bool:
+def dsa_verify(pubkey: str, sign: str, data: object) -> bool:
     """
     Vérifie la signature selon la clé publique.
 
-    :param public_key: Clé publique pour décrypter la signature.
+    :param pubkey: Clé publique pour décrypter la signature.
     :param sign: Signature à vérifier.
     :param data: Données à hacher.
     :return: True si la signature correspond au hash False sinon.
     """
     try:
-        public_key = DSA.import_key(b58decode(public_key.encode("utf-8")))
+        pubkey = DSA.import_key(b58decode(pubkey.encode("utf-8")))
         hash = SHA256.new(json_encode(data))
-        DSS.new(public_key, 'fips-186-3').verify(hash, unhexlify(sign))
+        DSS.new(pubkey, 'fips-186-3').verify(hash, unhexlify(sign))
         return True
     except:
         return False

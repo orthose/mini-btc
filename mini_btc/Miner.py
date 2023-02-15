@@ -1,7 +1,7 @@
 import threading, random
 from mini_btc import FullNode
 from mini_btc import Transaction
-from mini_btc.utils import sha256, address_from_publickey
+from mini_btc.utils import sha256, address_from_pubkey
 from typing import List
 
 
@@ -121,7 +121,7 @@ class Miner(FullNode):
 
             # Récompense de minage de 50 BTC
             reward_tx = Transaction()
-            address = address_from_publickey(self.pubkey)
+            address = address_from_pubkey(self.pubkey)
             lock = f"{self.pubkey} CHECKSIG"
             reward_tx.add_output(address, 50, lock)
             trans.append(reward_tx.to_dict())

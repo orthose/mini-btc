@@ -1,6 +1,6 @@
 from mini_btc.utils import \
     dsa_generate, dsa_export, dsa_import, \
-    dsa_publickey, address_from_publickey, dsa_sign
+    dsa_pubkey, address_from_pubkey, dsa_sign
 from mini_btc import Node
 from mini_btc import Transaction
 from typing import Tuple
@@ -34,10 +34,10 @@ class Wallet(Node):
 
         :param wallet_file: Fichier où stocker la clé privée en binaire.
         """
-        private_key = dsa_generate()
-        public_key, address = dsa_publickey(private_key)
+        privkey = dsa_generate()
+        pubkey, address = dsa_pubkey(privkey)
 
-        dsa_export(private_key, wallet_file)
+        dsa_export(privkey, wallet_file)
 
     def _import(self, wallet_file: str):
         """
@@ -45,11 +45,11 @@ class Wallet(Node):
 
         :param wallet_file: Chemin du fichier de la clé privée.
         """
-        self._private_key = dsa_import(wallet_file)
-        self.public_key, self.address = dsa_publickey(self._private_key)
+        self._privkey = dsa_import(wallet_file)
+        self.pubkey, self.address = dsa_pubkey(self._privkey)
 
         print(f"Address: {self.address}")
-        print(f"Public Key: {self.public_key}")
+        print(f"Public Key: {self.pubkey}")
 
     def connect(self):
         """
@@ -111,7 +111,7 @@ class Wallet(Node):
             utxo = self.utxo[i]
             index = Transaction(utxo).find_utxo(self.address)
             hash = utxo.pop("hash")
-            sign = dsa_sign(self._private_key, utxo)
+            sign = dsa_sign(self._privkey, utxo)
             tx.add_input(prevTxHash=hash, index=index, unlock=sign)
             input_value += utxo["output"][index]["value"]
 
@@ -123,13 +123,13 @@ class Wallet(Node):
 
         # UTXO pour le destinataire
         lock = f"{dest_pubkey} CHECKSIG"
-        tx.add_output(address=address_from_publickey(dest_pubkey), value=value, lock=lock)
+        tx.add_output(address=address_from_pubkey(dest_pubkey), value=value, lock=lock)
 
         # Je me rembourse
         input_value -= value
         if input_value > 0:
-            lock = f"{self.public_key} CHECKSIG"
-            tx.add_output(address=address_from_publickey(self.public_key), value=input_value, lock=lock)
+            lock = f"{self.pubkey} CHECKSIG"
+            tx.add_output(address=address_from_pubkey(self.pubkey), value=input_value, lock=lock)
 
         req = {"request": "TRANSACT", "tx": tx.to_dict()}
         if self.verbose == 2: self.logging(req)
