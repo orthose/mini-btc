@@ -82,6 +82,19 @@ vides ils commencent à miner et génèrent le bloc initial. Au fur et à mesure
 les récompenses de minage génèrent des tokens qui peut être échangés
 dans de vraies transactions.
 
+* **Comment est gérée une divergence de la blockchain ?**
+
+Le but de la blockchain est d'implémenter une base de données décentralisée
+et infalsifiable. Tous les nœuds doivent avoir la même version du registre.
+Si un nœud perd le réseau il risque de miner tout seul et de créer une branche
+alternative de la blockchain.
+
+Pour résoudre ce problème, il faut considérer que le blockchain la plus longue
+est toujours la vérité. Lorsqu'un nœud est en retard de plus de 1 bloc il effectue
+une requête privée **GET_BLOCKS** au nœud duquel lui est parvenu le bloc le plus
+récent. Ce nœud lui répond par une requête privée **LIST_BLOCKS** contenant la
+copie de sa blockchain.
+
 # Environnement virtuel
 Les programmes de ce projet s'exécutent dans un environnement virtuel Python.
 ```shell
