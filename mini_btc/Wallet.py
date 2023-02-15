@@ -113,7 +113,7 @@ class Wallet(Node):
             hash = utxo.pop("hash")
             sign = dsa_sign(self._privkey, utxo)
             tx.add_input(prevTxHash=hash, index=index, unlock=sign)
-            input_value += utxo["output"][index]["value"]
+            input_value += utxo["output"][index]["value"]; i += 1
 
         # Le solde est-il suffisant ?
         if input_value < value: return False

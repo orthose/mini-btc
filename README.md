@@ -256,6 +256,12 @@ SYNC
 On ne peut pas effectuer une transaction à soi-même. Si on le fait elle sera
 invalidée par le mineurs et ne sera jamais incluse dans un bloc.
 Nous allons à présent envoyer 10 BTC à Bob depuis le porte-feuille d'Alice.
+
+Notez que les transactions UTXO consommées sont automatiquement supprimées
+du porte-feuille. Pour les récupérer si notre transaction est invalide ou obtenir
+les UTXO mises à jour après l'ajout de notre transaction dans la blockchain il faut
+appeler `update_balance`. Il est donc normal de ne pas pouvoir faire de transfert
+temporairement car le solde indiqué est nul alors qu'en réalité il nous reste de l'argent.
 ```
 > update_balance
 SYNC
