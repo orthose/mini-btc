@@ -102,7 +102,7 @@ class Miner(FullNode):
             # Sélection aléatoire des transactions candidates
             trans = []
             invalid_trans = set()
-            for tx in self.buf_trans:
+            for tx in self.buf_trans.copy():
                 # La transaction est-elle valide ?
                 if self.check_tx(tx):
                     trans.append(tx.to_dict())
