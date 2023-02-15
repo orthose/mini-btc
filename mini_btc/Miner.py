@@ -59,13 +59,13 @@ class Miner(FullNode):
         with self.mining_cond:
             self.mining_cond.notify_all()
 
-    def _delete_trans(self, trans: set):
+    def _delete_tx(self, tx: set):
         """
         Supprime les transactions en entrée du buffer.
 
-        :param trans: Transactions à supprimer
+        :param tx: Transactions à supprimer
         """
-        super()._delete_trans(trans)
+        super()._delete_tx(tx)
 
         # Arrêt du minage du bloc courant
         # Le minage reprend automatiquement s'il y a assez de transactions
@@ -95,27 +95,27 @@ class Miner(FullNode):
         while True:
             with self.mining_cond:
                 # On démarre le minage si on a reçu suffisamment de transactions
-                while len(self.buf_trans) < self.block_size-1:
+                while len(self.buf_tx) < self.block_size-1:
                     # Attente passive
                     self.mining_cond.wait()
 
             # Sélection aléatoire des transactions candidates
-            trans = []
-            invalid_trans = set()
-            for tx in self.buf_trans.copy():
+            block_tx = []
+            wrong_tx = set()
+            for tx in self.buf_tx.copy():
                 # La transaction est-elle valide ?
                 if self.check_tx(tx):
-                    trans.append(tx.to_dict())
+                    block_tx.append(tx.to_dict())
                 else:
-                    invalid_trans.add(tx)
+                    wrong_tx.add(tx)
                 # Suffisamment de transactions valides ?
-                if len(trans) == self.block_size-1: break
+                if len(block_tx) == self.block_size-1: break
 
             # Suppression des transactions invalides
-            super()._delete_trans(invalid_trans)
+            super()._delete_tx(wrong_tx)
 
             # Activation du minage
-            if len(trans) == self.block_size-1:
+            if len(block_tx) == self.block_size-1:
                 self.is_mining = True
             else: continue
 
@@ -124,14 +124,14 @@ class Miner(FullNode):
             address = address_from_pubkey(self.pubkey)
             lock = f"{self.pubkey} CHECKSIG"
             reward_tx.add_output(address, 50, lock)
-            trans.append(reward_tx.to_dict())
+            block_tx.append(reward_tx.to_dict())
 
             # Construction d'un bloc à miner
             block = {
                 "index": len(self.ledger),
                 "hash": None if len(self.ledger) == 0 else sha256(self.ledger[-1]),
                 "nonce": random.randint(0, 1_000_000_000),
-                "trans": trans
+                "tx": block_tx
             }
 
             # Minage du bloc

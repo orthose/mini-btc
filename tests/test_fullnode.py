@@ -17,11 +17,11 @@ n3.start()
 sleep(1)
 
 # Création du premier bloc sur n1
-genesis =  {'index': 0, 'hash': None, 'nonce': 334155872, 'trans': [
-    {'locktime': 1676235615.5138822, 'input': [], 'output': [], 'hash': '10b484a625322caadb9f1c6da2d30a0e140677febc9f9a648f46001a5e8fc756'},
-    {'locktime': 1676235617.8596997, 'input': [], 'output': [], 'hash': '1c060157e9af77b5dcf6d75efbfde7237fc05c9b423afada0ce2e7280790e964'},
-    {'locktime': 1676235617.9343636, 'input': [], 'output': [
-        {'address': '668wc7STftWcCMUR8o9G62epry1GCDc5PiMnWmXySzW8', 'value': 50, 'lock': 'BQfcHxQKFtLLEA9o2azM9N2owM1eaArtwEPJYtguXQPyUohbFubHLjBsb3zQuQSgCEnJ5ZL87yKZ2mZomnKasa7HGgGHG7Rabzo9PjaAt4R6h8RyWRUtSHQCAArqqXagy7rTpfDi4BKoSXcpWsNgfnjBttcd3rbdBxrL9pGHZvPP7vsA2cPPYW1k2LNezr2MW6NSWRmevXYYbq9Ly9WgKWUTXx6yhYTiuWZMG4P8xCNwDqXZPDwUWhcwV5Bf4w4V9kodG9yiJnxRax4bF4CzveJoR68ehYaF1ePNMcnA8cR1SPFTpMJLnQXNv35hGwbz2PRQ4yFPfrYiwLEk1yoaYKWisZj9QyKCnqxRxrGW36TtuBLhksQoBnEkddginsDYezxFG7WZtbwuQWBQzohmTBWd51f9BK3koHrZpUPXrvhgJchmKcqdbH2YRoyMRNSAkADyLBoPphdvbPNEBaHKoDjXNnLXe5ZBEWxeW3qdrXTsPRXmhLYbZ2HbKoAiAg1mWcSqSpZZLV89xJXP1p6Wb1TDAZm8BGLFs9iCLMPZcGzBZ2cPqszor7b8ZngEYDznvKBDbkebq927fWWKwMEcBnLu9KrZg CHECKSIG'}], 'hash': '8c5c5dbf814d798e852f0199112706f38b438c9cf29a795cdcd50907d4bd9d9f'}]}
+genesis = {'index': 0, 'hash': None, 'nonce': 401215382, 'tx': [
+    {'locktime': 1676499614.074428, 'input': [], 'output': [], 'hash': '43e8e99985ebb8af9cbd94f797498597c44b1c110c438a31e762ebf34c05499b'},
+    {'locktime': 1676499615.9626899, 'input': [], 'output': [], 'hash': 'd81f8255ba339a273761f7cde533cd1529845a87837d4be5432a022a2d61ff75'},
+    {'locktime': 1676499616.0042086, 'input': [], 'output': [
+        {'address': '668wc7STftWcCMUR8o9G62epry1GCDc5PiMnWmXySzW8', 'value': 50, 'lock': 'BQfcHxQKFtLLEA9o2azM9N2owM1eaArtwEPJYtguXQPyUohbFubHLjBsb3zQuQSgCEnJ5ZL87yKZ2mZomnKasa7HGgGHG7Rabzo9PjaAt4R6h8RyWRUtSHQCAArqqXagy7rTpfDi4BKoSXcpWsNgfnjBttcd3rbdBxrL9pGHZvPP7vsA2cPPYW1k2LNezr2MW6NSWRmevXYYbq9Ly9WgKWUTXx6yhYTiuWZMG4P8xCNwDqXZPDwUWhcwV5Bf4w4V9kodG9yiJnxRax4bF4CzveJoR68ehYaF1ePNMcnA8cR1SPFTpMJLnQXNv35hGwbz2PRQ4yFPfrYiwLEk1yoaYKWisZj9QyKCnqxRxrGW36TtuBLhksQoBnEkddginsDYezxFG7WZtbwuQWBQzohmTBWd51f9BK3koHrZpUPXrvhgJchmKcqdbH2YRoyMRNSAkADyLBoPphdvbPNEBaHKoDjXNnLXe5ZBEWxeW3qdrXTsPRXmhLYbZ2HbKoAiAg1mWcSqSpZZLV89xJXP1p6Wb1TDAZm8BGLFs9iCLMPZcGzBZ2cPqszor7b8ZngEYDznvKBDbkebq927fWWKwMEcBnLu9KrZg CHECKSIG'}], 'hash': '7935c3a03b459a2610878fd2b526d2ba776dc9ed829b811697aac41e43c6a40f'}]}
 n1.ledger.append(genesis)
 
 # Soumission de ce premier bloc sur le réseau
@@ -39,9 +39,9 @@ req = {'request': 'TRANSACT', 'tx': {'locktime': 1676235668.405151, 'input': [],
 n1.broadcast(req)
 sleep(1)
 
-n1.logging(n1.buf_trans)
-n2.logging(n2.buf_trans)
-n3.logging(n3.buf_trans)
+assert 1 == len(n1.buf_tx)
+assert 1 == len(n2.buf_tx)
+assert 1 == len(n3.buf_tx)
 
 # Demande de blocs à un noeud
 n1.ledger = []

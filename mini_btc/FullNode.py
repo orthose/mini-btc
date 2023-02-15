@@ -42,7 +42,7 @@ class FullNode(Node):
         self.block_size = block_size
 
         # Tampon des transactions candidates (à inclure dans les prochains blocs)
-        self.buf_trans = set()
+        self.buf_tx = set()
         # Transactions non-dépensées par adresse
         self.utxo = dict()
 
@@ -66,7 +66,7 @@ class FullNode(Node):
         # Traitement d'une transaction
         if "TRANSACT" == body["request"]:
             body.pop("request")
-            self.buf_trans.add(Transaction(body["tx"]))
+            self.buf_tx.add(Transaction(body["tx"]))
             self._transact_callback(host, port, body)
 
         # Soumission d'un bloc résolu
@@ -118,9 +118,9 @@ class FullNode(Node):
             # Récupération des anciennes transactions
             old_tx = set()
             for block in self.ledger:
-                old_tx.update({Transaction(tx) for tx in block["trans"]})
+                old_tx.update({Transaction(tx) for tx in block["tx"]})
             # Ajout des anciennes transactions libérées
-            self.buf_trans.update(old_tx)
+            self.buf_tx.update(old_tx)
 
             self.lock_ledger.acquire()
 
@@ -146,13 +146,13 @@ class FullNode(Node):
             req = {"request": "BALANCE", "address": address, "utxo": utxo}
             super().send(host, port, req)
 
-    def _delete_trans(self, trans: set):
+    def _delete_tx(self, tx: set):
         """
         Supprime les transactions en entrée du buffer.
 
         :param trans: Transactions à supprimer
         """
-        self.buf_trans.difference_update(trans)
+        self.buf_tx.difference_update(tx)
 
     def _transact_callback(self, host: str, port: int, body: object):
         """
@@ -174,7 +174,7 @@ class FullNode(Node):
         """
         # Les champs du bloc sont-ils tous renseignés ?
         res = (len(block) == 4 and "index" in block and "hash" in block
-            and "nonce" in block and "trans" in block)
+            and "nonce" in block and "tx" in block)
 
         # Le hash du bloc comprend-il difficulty 0 au début ?
         res = res and '0' * self.difficulty == sha256(block)[0:self.difficulty]
@@ -183,7 +183,7 @@ class FullNode(Node):
         if check_tx:
             # On accepte une seule transaction récompense par bloc
             reward_utxo = False
-            for tx in block["trans"]:
+            for tx in block["tx"]:
                 tx = Transaction(tx)
 
                 # Transaction récompense
@@ -214,7 +214,7 @@ class FullNode(Node):
         :return: Transaction correspondante None si absente.
         """
         for block in self.ledger:
-            for tx in block["trans"]:
+            for tx in block["tx"]:
                 if txHash == tx["hash"]:
                     return Transaction(tx)
         return None
@@ -277,7 +277,7 @@ class FullNode(Node):
             # Ajout du bloc au registre
             self.ledger.append(block)
 
-            for tx in block["trans"]:
+            for tx in block["tx"]:
                 # Suppression des UTXO consommées
                 for intx in tx["input"]:
                     index = intx["index"]
@@ -295,7 +295,7 @@ class FullNode(Node):
                     self.utxo[address].add(Transaction(tx))
 
             # Suppression des transactions candidates traitées
-            self._delete_trans({Transaction(tx) for tx in block["trans"]})
+            self._delete_tx({Transaction(tx) for tx in block["tx"]})
 
         if lock: self.lock_ledger.release()
 
