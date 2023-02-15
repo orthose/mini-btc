@@ -37,9 +37,6 @@ class Wallet(Node):
         private_key = dsa_generate()
         public_key, address = dsa_publickey(private_key)
 
-        print(f"Address: {address}")
-        print(f"Public Key: {public_key}")
-
         dsa_export(private_key, wallet_file)
 
     def _import(self, wallet_file: str):
