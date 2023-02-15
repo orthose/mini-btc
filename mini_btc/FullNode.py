@@ -233,7 +233,9 @@ class FullNode(Node):
         :return: True si valide False sinon.
         """
         # Transaction vide
-        if len(tx.input) == 0 and len(tx.output) == 0: return True
+        if len(tx.input) == 0 and len(tx.output) == 0:
+            # La transaction existe-t-elle déjà dans le registre ?
+            return self.find_tx(tx.to_dict()["hash"]) is None
 
         # Transaction classique
         input_value = 0
