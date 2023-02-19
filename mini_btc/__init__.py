@@ -1,3 +1,4 @@
+from .MerkleTree import MerkleTree
 from .Node import Node
 from .Transaction import Transaction
 from .Wallet import Wallet

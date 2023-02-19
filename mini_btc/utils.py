@@ -99,6 +99,16 @@ def sha256(obj: object) -> str:
     return SHA256.new(json_encode(obj)).hexdigest()
 
 
+def sum_hash(h1: str, h2: str) -> str:
+    """
+    Calcule le hash de la somme de 2 hashs.
+
+    :param h1, h2: Chaîne de caractères en base 16 des hashs.
+    :return: Chaîne de caractères en base 16 du hash final.
+    """
+    return SHA256.new(unhexlify(h1) + unhexlify(h2)).hexdigest()
+
+
 def dsa_generate(size=1024) -> DSA.DsaKey:
     """
     Génère une clé privée DSA aléatoire.

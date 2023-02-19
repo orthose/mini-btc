@@ -101,6 +101,7 @@ class FullNode(Node):
 
         GET_BLOCKS: Demande d'une liste de blocs résolus.
         LIST_BLOCKS: Réception d'une liste de blocs résolus.
+        GET_BALNCE: Demande des UTXO associées à une adresse.
         """
         # Demande de blocs résolus
         if "GET_BLOCKS" == body["request"]:
