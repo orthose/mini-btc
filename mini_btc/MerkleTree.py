@@ -36,16 +36,19 @@ class MerkleTree:
         """
         Initialise un arbre de Merkle à partir d'une liste de hashs.
 
-        :param hashs: Liste de hashs sous forme de chaînes de caractères.
+        :param hashs: Liste de hashs sous forme de string.
         Si None ou liste vide crée un arbre vide.
+        On suppose que les hashs sont uniques.
         """
-        if hashs is None or len(hashs) == 0:
+        self.hashs = [] if hashs is None else hashs
+
+        if len(self.hashs) == 0:
             self.tree = None
             return
 
         # Niveau 0 des feuilles
         lvl = 0
-        tree = [MerkleNode(h, lvl, None, None) for h in hashs]
+        tree = [MerkleNode(h, lvl, None, None) for h in self.hashs]
 
         # Fusion des arbres par étage
         while len(tree) > 1:
@@ -62,3 +65,42 @@ class MerkleTree:
             tree = new_tree
 
         self.tree = tree[0]
+
+    def get_root(self) -> str:
+        """
+        Renvoie le hash de la racine de l'arbre de Merkle.
+
+        :return: String du hash correspondant.
+        """
+        return self.tree.hash
+
+    def get_proof(self, hash: str) -> List[str]:
+        """
+        Renvoie la preuve qu'un hash est dans l'arbre de Merkle
+        sous forme d'une liste de hashs.
+
+        :param hash: String du hash à prouver.
+        :return: Liste de string des hashs constituant la preuve.
+        """
+        # On renvoie la hash de la racine si un seul hash
+        if len(self.hashs) == 1:
+            return [hash]
+
+        # Indice du hash à prouver dans la liste des hashs
+        index = self.hashs.index(hash)
+
+        def build_proof(index: int, tree: 'MerkleNode', proof: List[str]) -> List[str]:
+            # On atteint le niveau des feuilles
+            if tree.level == 0:
+                return proof
+            # La feuille recherchée est à gauche
+            elif index < 2**(tree.level-1):
+                proof.append(tree.right.hash)
+                return build_proof(index, tree.left, proof)
+            # La feuille recherchée est à droite
+            else:
+                proof.append(tree.left.hash)
+                # On rescale l'index à partir de 0 pour le sous-arbre droit
+                return build_proof(index-2**(tree.level-1), tree.right, proof)
+
+        return build_proof(index, self.tree, [])
