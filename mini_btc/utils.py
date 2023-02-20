@@ -101,12 +101,12 @@ def sha256(obj: object) -> str:
 
 def sum_hash(h1: str, h2: str) -> str:
     """
-    Calcule le hash de la somme de 2 hashs.
+    Calcule le hash de la somme de 2 hashs. Opération commutative.
 
     :param h1, h2: Chaîne de caractères en base 16 des hashs.
     :return: Chaîne de caractères en base 16 du hash final.
     """
-    return SHA256.new(unhexlify(h1) + unhexlify(h2)).hexdigest()
+    return SHA256.new(str(int(h1, 16) + int(h2, 16)).encode("utf-8")).hexdigest()
 
 
 def dsa_generate(size=1024) -> DSA.DsaKey:
