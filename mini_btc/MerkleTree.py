@@ -76,16 +76,13 @@ class MerkleTree:
 
     def get_proof(self, hash: str) -> List[str]:
         """
-        Renvoie la preuve qu'un hash est dans l'arbre de Merkle
+        Construit la preuve qu'un hash est dans l'arbre de Merkle
         sous forme d'une liste de hashs.
 
         :param hash: String du hash à prouver.
         :return: Liste de string des hashs constituant la preuve.
+        Liste vide si un seul hash dans l'arbre (à la racine).
         """
-        # On renvoie la hash de la racine si un seul hash
-        if len(self.hashs) == 1:
-            return [hash]
-
         # Indice du hash à prouver dans la liste des hashs
         index = self.hashs.index(hash)
 
@@ -104,3 +101,20 @@ class MerkleTree:
                 return build_proof(index-2**(tree.level-1), tree.right, proof)
 
         return build_proof(index, self.tree, [])
+
+    @staticmethod
+    def verify_proof(hash: str, root: str, proof: List[str]) -> bool:
+        """
+        Vérifie la preuve d'un hash par rapport à la racine d'un arbre de Merkle.
+
+        :param hash: String du hash à prouver.
+        :param root: String du hash de la racine de l'arbre.
+        :param proof: Liste de string des hashs prouvant le hash.
+        :return: True si preuve valide False sinon.
+        """
+        proof = proof.copy()
+
+        for _ in range(len(proof)):
+            hash = sum_hash(hash, proof.pop())
+
+        return root == hash
