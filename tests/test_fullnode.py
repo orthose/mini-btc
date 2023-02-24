@@ -17,11 +17,12 @@ n3.start()
 sleep(1)
 
 # Création du premier bloc sur n1
-genesis = {'index': 0, 'hash': None, 'nonce': 401215382, 'tx': [
-    {'locktime': 1676499614.074428, 'input': [], 'output': [], 'hash': '43e8e99985ebb8af9cbd94f797498597c44b1c110c438a31e762ebf34c05499b'},
-    {'locktime': 1676499615.9626899, 'input': [], 'output': [], 'hash': 'd81f8255ba339a273761f7cde533cd1529845a87837d4be5432a022a2d61ff75'},
-    {'locktime': 1676499616.0042086, 'input': [], 'output': [
-        {'address': '668wc7STftWcCMUR8o9G62epry1GCDc5PiMnWmXySzW8', 'value': 50, 'lock': 'BQfcHxQKFtLLEA9o2azM9N2owM1eaArtwEPJYtguXQPyUohbFubHLjBsb3zQuQSgCEnJ5ZL87yKZ2mZomnKasa7HGgGHG7Rabzo9PjaAt4R6h8RyWRUtSHQCAArqqXagy7rTpfDi4BKoSXcpWsNgfnjBttcd3rbdBxrL9pGHZvPP7vsA2cPPYW1k2LNezr2MW6NSWRmevXYYbq9Ly9WgKWUTXx6yhYTiuWZMG4P8xCNwDqXZPDwUWhcwV5Bf4w4V9kodG9yiJnxRax4bF4CzveJoR68ehYaF1ePNMcnA8cR1SPFTpMJLnQXNv35hGwbz2PRQ4yFPfrYiwLEk1yoaYKWisZj9QyKCnqxRxrGW36TtuBLhksQoBnEkddginsDYezxFG7WZtbwuQWBQzohmTBWd51f9BK3koHrZpUPXrvhgJchmKcqdbH2YRoyMRNSAkADyLBoPphdvbPNEBaHKoDjXNnLXe5ZBEWxeW3qdrXTsPRXmhLYbZ2HbKoAiAg1mWcSqSpZZLV89xJXP1p6Wb1TDAZm8BGLFs9iCLMPZcGzBZ2cPqszor7b8ZngEYDznvKBDbkebq927fWWKwMEcBnLu9KrZg CHECKSIG'}], 'hash': '7935c3a03b459a2610878fd2b526d2ba776dc9ed829b811697aac41e43c6a40f'}]}
+genesis = {'index': 0, 'hash': None, 'root': '3e85455d74d714c9c9fad556cd3b6f0d1a91f54338c2fe43ee9dff0861fa6c70', 'nonce': 759273861, 'tx': [
+    {'locktime': 1677271598.235741, 'input': [], 'output': [], 'hash': '21419e2a06f05a966bd73b3660b0faffa9397be6671cfa5a506f457e40779c47'},
+    {'locktime': 1677271600.9368517, 'input': [], 'output': [], 'hash': 'c151bf642b1a9e63acf3860cbaaa239823935c6d07757cd2d97a0e0e723ea0d6'},
+    {'locktime': 1677271600.9819515, 'input': [], 'output': [
+        {'address': '668wc7STftWcCMUR8o9G62epry1GCDc5PiMnWmXySzW8', 'value': 50, 'lock': 'BQfcHxQKFtLLEA9o2azM9N2owM1eaArtwEPJYtguXQPyUohbFubHLjBsb3zQuQSgCEnJ5ZL87yKZ2mZomnKasa7HGgGHG7Rabzo9PjaAt4R6h8RyWRUtSHQCAArqqXagy7rTpfDi4BKoSXcpWsNgfnjBttcd3rbdBxrL9pGHZvPP7vsA2cPPYW1k2LNezr2MW6NSWRmevXYYbq9Ly9WgKWUTXx6yhYTiuWZMG4P8xCNwDqXZPDwUWhcwV5Bf4w4V9kodG9yiJnxRax4bF4CzveJoR68ehYaF1ePNMcnA8cR1SPFTpMJLnQXNv35hGwbz2PRQ4yFPfrYiwLEk1yoaYKWisZj9QyKCnqxRxrGW36TtuBLhksQoBnEkddginsDYezxFG7WZtbwuQWBQzohmTBWd51f9BK3koHrZpUPXrvhgJchmKcqdbH2YRoyMRNSAkADyLBoPphdvbPNEBaHKoDjXNnLXe5ZBEWxeW3qdrXTsPRXmhLYbZ2HbKoAiAg1mWcSqSpZZLV89xJXP1p6Wb1TDAZm8BGLFs9iCLMPZcGzBZ2cPqszor7b8ZngEYDznvKBDbkebq927fWWKwMEcBnLu9KrZg CHECKSIG'}],
+    'hash': 'fae3166e856571a85ca5ed144d3f45d768fd5b422d3205622fc5c75a5e9d61c3'}]}
 n1.ledger.append(genesis)
 
 # Soumission de ce premier bloc sur le réseau

@@ -29,8 +29,8 @@ bob.start(); sleep(1)
 
 # Génération du bloc de départ
 # Pour lancer le minage on envoie des transactions vides
-alice.empty_transfer(); sleep(1)
-alice.empty_transfer(); sleep(10)
+t1 = alice.empty_transfer(); sleep(1)
+t2 = alice.empty_transfer(); sleep(10)
 
 # Vérification du solde de Alice et Bob
 alice.update_balance(); sleep(1)
@@ -39,9 +39,14 @@ assert 50 == alice.get_balance()
 bob.update_balance(); sleep(1)
 assert 0 == bob.get_balance()
 
+# Vérification des transactions de Alice
+alice.sync_block(); alice.get_proof(t1); alice.get_proof(t2); sleep(1)
+assert alice.verify_proof(t1)
+assert alice.verify_proof(t2)
+
 # Alice envoie 10 BTC à Bob
-alice.transfer(bob_pubkey, 10); sleep(1)
-alice.empty_transfer(); sleep(10)
+t3 = alice.transfer(bob_pubkey, 10); sleep(1)
+t4 = alice.empty_transfer(); sleep(10)
 
 # Vérification du solde de Alice et Bob
 alice.update_balance(); sleep(1)
@@ -50,10 +55,15 @@ assert (50-10) + 50 == alice.get_balance()
 bob.update_balance(); sleep(1)
 assert 10 == bob.get_balance()
 
+# Vérification des transactions de Alice
+alice.sync_block(); alice.get_proof(t3); alice.get_proof(t4); sleep(1)
+assert alice.verify_proof(t3)
+assert alice.verify_proof(t4)
+
 # Alice envoie 5 BTC à Bob
-alice.transfer(bob_pubkey, 5); sleep(1)
+t5 = alice.transfer(bob_pubkey, 5); sleep(1)
 # Bob envoie 3 BTC à Alice
-bob.transfer(alice_pubkey, 3)
+t6 = bob.transfer(alice_pubkey, 3)
 sleep(10)
 
 # Vérification du solde de Alice et Bob
@@ -62,3 +72,11 @@ assert (50-10) + (50-5) + (50+3) == alice.get_balance()
 
 bob.update_balance(); sleep(1)
 assert 10-3+5 == bob.get_balance()
+
+# Vérification des transactions de Alice et Bob
+alice.sync_block(); alice.get_proof(t5); sleep(1)
+assert alice.verify_proof(t5)
+
+# Note: Alice pourrait vérifier la transaction de Bob
+bob.sync_block(); bob.get_proof(t6); sleep(1)
+assert bob.verify_proof(t6)
