@@ -3,13 +3,17 @@ from mini_btc.utils import \
     dsa_pubkey, address_from_pubkey, dsa_sign
 from mini_btc import Node
 from mini_btc import Transaction
-from typing import Tuple
+from mini_btc import MerkleTree
+from typing import Tuple, Union
 
 
 class Wallet(Node):
     """
     Porte-feuille permettant de communiquer avec un noeud de la BlockChain.
     ATTENTION: Le Wallet doit être connecté à un FullNode ou un Miner.
+
+    Le porte-feuille est un noeud léger. Il stocke le registre des headers de bloc.
+    Il ne vérifie pas la BlockChain il fait confiance au FullNode auquel il se connecte.
     """
     def __init__(self, wallet_file: str, listen_host: str, listen_port: int,
         remote_host, remote_port: int, verbose: int = 2):
@@ -23,8 +27,20 @@ class Wallet(Node):
         """
         super().__init__(listen_host, listen_port, remote_host, remote_port,
             max_nodes=1, verbose=verbose)
+
+        self.remote_host, self.remote_port = remote_host, remote_port
+
+        # Chargement du fichier contenant la clé privée
         self._import(wallet_file)
+
+        # Registre des headers de bloc
+        self.ledger = []
+
+        # Transactions non-dépensées
         self.utxo = []
+
+        # Preuves de validation des transactions
+        self.proof_tx = dict()
 
     @staticmethod
     def create(wallet_file: str):
@@ -71,14 +87,27 @@ class Wallet(Node):
         if "BALANCE" == body["request"]:
             self.utxo = body["utxo"]
 
+        # Récupération de la blockchain
+        elif "LIST_BLOCKS" == body["request"]:
+            ledger = []
+            for block in body["blocks"]:
+                # On ne garde que les headers de bloc
+                block.pop("tx")
+                # On ne vérifie pas les blocs
+                ledger.append(block)
+            # On écrase la totalité du registre
+            self.ledger = ledger
+
+        elif "PROOF" == body["request"]:
+            self.proof_tx[body["txid"]] = {"index": body["index"], "proof": body["proof"]}
+
     def update_balance(self):
         """
         Demande au noeud les UTXO appartenant à l'adresse du porte-feuille
         pour mettre à jour le solde. Requête asynchrone.
         """
-        remote_host, remote_port = list(self.nodes)[0]
         req = {"request": "GET_BALANCE", "address": self.address}
-        self.send(remote_host, remote_port, req)
+        self.send(self.remote_host, self.remote_port, req)
 
     def get_balance(self) -> int:
         """
@@ -94,16 +123,16 @@ class Wallet(Node):
                 res += tx["output"][index]["value"]
         return res
 
-    def transfer(self, dest_pubkey: str, value: int) -> bool:
+    def transfer(self, dest_pubkey: str, value: int) -> Union[str, None]:
         """
         Soumission d'une transaction au réseau.
 
         :param dest_pubkey: Clé publique du destinataire.
         :param value: Montant de la transaction.
-        :return: True si la transaction a été envoyée False sinon.
+        :return: txid si la transaction a été envoyée None sinon.
         """
         # Le transfert est abandonné si pas de UTXO
-        if len(self.utxo) == 0: return False
+        if len(self.utxo) == 0: return None
 
         tx = Transaction()
         input_value = 0; i = 0
@@ -116,7 +145,7 @@ class Wallet(Node):
             input_value += utxo["output"][index]["value"]; i += 1
 
         # Le solde est-il suffisant ?
-        if input_value < value: return False
+        if input_value < value: return None
 
         # Suppression des UTXO consommées
         self.utxo = self.utxo[i+1:]
@@ -131,22 +160,64 @@ class Wallet(Node):
             lock = f"{self.pubkey} CHECKSIG"
             tx.add_output(address=address_from_pubkey(self.pubkey), value=input_value, lock=lock)
 
-        req = {"request": "TRANSACT", "tx": tx.to_dict()}
-        if self.verbose == 2: self.logging(req)
+        tx = tx.to_dict()
+        req = {"request": "TRANSACT", "tx": tx}
         self.broadcast(req)
 
-        return True
+        return tx["hash"]
 
-    def empty_transfer(self) -> bool:
+    def empty_transfer(self) -> Union[str, None]:
         """
         Soumission d'une transaction vide.
         Permet de lancer le minage du premier bloc.
 
-        :return: True si la transaction a été envoyée False sinon.
+        :return: txid si la transaction a été envoyée None sinon.
         """
-        tx = Transaction()
-        req = {"request": "TRANSACT", "tx": tx.to_dict()}
-        if self.verbose == 2: self.logging(req)
+        tx = Transaction().to_dict()
+        req = {"request": "TRANSACT", "tx": tx}
         self.broadcast(req)
 
-        return True
+        return tx["hash"]
+
+    def sync_block(self):
+        """
+        Mise à jour du registre du porte-feuille.
+        Les blocs ne sont pas vérifiés.
+        """
+        req = {"request": "GET_BLOCKS"}
+        self.send(self.remote_host, self.remote_port, req)
+
+    def get_proof(self, txid: str):
+        """
+        Demande une preuve de validation d'une transaction.
+        La réception de la preuve est asynchrone.
+        Si aucune réponse n'est reçue cela peut signifier que la transaction
+        n'est pas encore validée.
+
+        :param txid: Hash de la transaction à prouver.
+        """
+        req = {"request": "GET_PROOF", "txid": txid}
+        self.send(self.remote_host, self.remote_port, req)
+
+    def verify_proof(self, txid: str) -> bool:
+        """
+        Vérifie une preuve reçue pour une transaction.
+
+        :param txid: Hash de la transaction à vérifer.
+        :return: True si transaction validée False sinon.
+        """
+        res = False
+
+        if txid in self.proof_tx:
+            proof = self.proof_tx[txid]
+            index = proof["index"]
+
+            # Le registre n'est pas à jour
+            if len(self.ledger) <= index:
+                return False
+
+            root = self.ledger[index]["root"]
+            proof = proof["proof"]
+            res = MerkleTree.verify_proof(txid, root, proof)
+
+        return res

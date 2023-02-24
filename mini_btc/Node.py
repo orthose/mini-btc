@@ -228,6 +228,7 @@ class Node:
         # On suppose qu'un noeud ne peut pas envoyer plusieurs paquets au même moment
         id = f"{self.name}#{time.time()}"
         pck = {"header": "BROADCAST", "host": self.host, "port": self.port, "id": id, "body": body}
+        if self.verbose == 2: self.logging(pck["body"])
         self.__broadcast(pck)
 
     def send(self, remote_host: str, remote_port: int, body: object):
@@ -241,4 +242,5 @@ class Node:
         :param body: Objet Python sérialiable en JSON.
         """
         pck = {"header": "PRIVATE", "host": self.host, "port": self.port, "body": body}
+        if self.verbose == 2: self.logging(pck["body"])
         send(remote_host, remote_port, pck)

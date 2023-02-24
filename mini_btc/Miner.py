@@ -1,6 +1,7 @@
 import threading, random
 from mini_btc import FullNode
 from mini_btc import Transaction
+from mini_btc import MerkleTree
 from mini_btc.utils import sha256, address_from_pubkey
 from typing import List
 
@@ -128,9 +129,15 @@ class Miner(FullNode):
 
             # Construction d'un bloc à miner
             block = {
+                # Numéro de bloc indexé à partir de 0
                 "index": len(self.ledger),
+                # Hash du bloc précédent auquel on se chaîne
                 "hash": None if len(self.ledger) == 0 else sha256(self.ledger[-1]),
+                # Hash de la racine de l'arbre de Merkle
+                "root": MerkleTree([tx["hash"] for tx in block_tx]).get_root(),
+                # Valeur à incrémenter pour le minage
                 "nonce": random.randint(0, 1_000_000_000),
+                # Liste des transactions du bloc
                 "tx": block_tx
             }
 

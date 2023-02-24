@@ -2,6 +2,7 @@ import threading
 from mini_btc import Node
 from mini_btc.utils import sha256, send
 from mini_btc import Transaction
+from mini_btc import MerkleTree
 from mini_btc.script import execute
 from typing import Union
 
@@ -101,7 +102,7 @@ class FullNode(Node):
 
         GET_BLOCKS: Demande d'une liste de blocs résolus.
         LIST_BLOCKS: Réception d'une liste de blocs résolus.
-        GET_BALNCE: Demande des UTXO associées à une adresse.
+        GET_BALANCE: Demande des UTXO associées à une adresse.
         """
         # Demande de blocs résolus
         if "GET_BLOCKS" == body["request"]:
@@ -147,6 +148,18 @@ class FullNode(Node):
             req = {"request": "BALANCE", "address": address, "utxo": utxo}
             super().send(host, port, req)
 
+        # Demande de preuve de validation de transaction
+        elif "GET_PROOF" == body["request"]:
+            txid = body["txid"]
+            index = self.find_tx(txid, return_index=True)
+
+            # On ne renvoie pas de réponse si transaction pas encore validée
+            if index is not None:
+                tx_hash = [tx["hash"] for tx in self.ledger[index]["tx"]]
+                proof = MerkleTree(tx_hash).get_proof(txid)
+                req = {"request": "PROOF", "txid": txid, "index": index, "proof": proof}
+                super().send(host, port, req)
+
     def _delete_tx(self, tx: set):
         """
         Supprime les transactions en entrée du buffer.
@@ -174,11 +187,14 @@ class FullNode(Node):
         :return: True si valide False sinon.
         """
         # Les champs du bloc sont-ils tous renseignés ?
-        res = (len(block) == 4 and "index" in block and "hash" in block
-            and "nonce" in block and "tx" in block)
+        res = (len(block) == 5 and "index" in block and "hash" in block
+            and "root" in block and "nonce" in block and "tx" in block)
 
-        # Le hash du bloc comprend-il difficulty 0 au début ?
+        # Le hash du bloc comprend-il difficulty fois 0 au début ?
         res = res and '0' * self.difficulty == sha256(block)[0:self.difficulty]
+
+        # La racine de Merkle a-t-elle été correctement calculée ?
+        res = res and block["root"] == MerkleTree([tx["hash"] for tx in block["tx"]]).get_root()
 
         # Les transactions sont-elles valides ?
         if check_tx:
@@ -196,6 +212,7 @@ class FullNode(Node):
                 # Transaction classique
                 else:
                     res = res and self.check_tx(tx)
+
         return res
 
     def _check_chain(self, block: object) -> bool:
@@ -207,17 +224,20 @@ class FullNode(Node):
         """
         return len(self.ledger) == 0 or sha256(self.ledger[-1]) == block["hash"]
 
-    def find_tx(self, txHash: str) -> Union[Transaction, None]:
+    def find_tx(self, txHash: str, return_index=False) -> Union[Transaction, int, None]:
         """
         Recherche une transaction dans le registre.
 
         :param txHash: Hash de la transaction.
-        :return: Transaction correspondante None si absente.
+        :param return_index: Si True on renvoie l'indice du bloc dans le registre.
+        :return: Transaction correspondante ou indice du bloc
+        ou None si transaction absente.
         """
-        for block in self.ledger:
+        for index, block in enumerate(self.ledger):
             for tx in block["tx"]:
                 if txHash == tx["hash"]:
-                    return Transaction(tx)
+                    if return_index: return index
+                    else: return Transaction(tx)
         return None
 
     def check_tx(self, tx: Transaction) -> bool:
