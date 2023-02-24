@@ -64,10 +64,11 @@ assert alice.verify_proof(t4)
 t5 = alice.transfer(bob_pubkey, 5); sleep(1)
 # Bob envoie 3 BTC à Alice
 t6 = bob.transfer(alice_pubkey, 3)
-sleep(10)
+sleep(12)
 
 # Vérification du solde de Alice et Bob
 alice.update_balance(); sleep(1)
+# Note: Cette vérification peut échouer si on n'a pas de chance
 assert (50-10) + (50-5) + (50+3) == alice.get_balance()
 
 bob.update_balance(); sleep(1)

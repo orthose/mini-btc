@@ -101,6 +101,7 @@ class Wallet(Node):
             # On écrase la totalité du registre
             self.ledger = ledger
 
+        # Réception d'une preuve de transaction
         elif "PROOF" == body["request"]:
             self.proof_tx[body["txid"]] = {"index": body["index"], "proof": body["proof"]}
 
@@ -151,7 +152,7 @@ class Wallet(Node):
         tx = Transaction()
         input_value = 0; i = 0
         while input_value < value and i < len(self.utxo):
-            utxo = self.utxo[i]
+            utxo = self.utxo[i].copy()
             index = Transaction(utxo).find_utxo(self.address)
             hash = utxo.pop("hash")
             sign = dsa_sign(self._privkey, utxo)
