@@ -33,6 +33,9 @@ class Wallet(Node):
         # Chargement du fichier contenant la clé privée
         self._import(wallet_file)
 
+        # Annuaire des adresses
+        self.addr = dict()
+
         # Registre des headers de bloc
         self.ledger = []
 
@@ -123,11 +126,22 @@ class Wallet(Node):
                 res += tx["output"][index]["value"]
         return res
 
+    def register(self, name: str, addr: str):
+        """
+        Enregistrement d'une adresse avec un nom raccourci dans l'annuaire.
+        L'adresse peut être une clé publique dans le cas d'un paiement P2PK.
+
+        :param name: Raccourci pour retrouver l'adresse.
+        :param addr: Adresse complète à enregistrer.
+        """
+        self.addr[name] = addr
+
     def transfer(self, dest_pubkey: str, value: int) -> Union[str, None]:
         """
         Soumission d'une transaction au réseau.
 
-        :param dest_pubkey: Clé publique du destinataire.
+        :param dest_pubkey: Clé publique du destinataire
+        ou raccourci présent dans l'annuaire.
         :param value: Montant de la transaction.
         :return: txid si la transaction a été envoyée None sinon.
         """
@@ -151,6 +165,8 @@ class Wallet(Node):
         self.utxo = self.utxo[i+1:]
 
         # UTXO pour le destinataire
+        if dest_pubkey in self.addr:
+            dest_pubkey = self.addr[dest_pubkey]
         lock = f"{dest_pubkey} CHECKSIG"
         tx.add_output(address=address_from_pubkey(dest_pubkey), value=value, lock=lock)
 

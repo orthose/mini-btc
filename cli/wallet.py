@@ -11,7 +11,11 @@ help = \
 * get_balance: Affiche le solde du porte-feuille.
 Note: Mettre à jour les UTXO au préalable.
 
+* register <name> <pubkey>: Enregistrement d'une clé publique dans l'annuaire.
+Si aucun argument renseigné affiche l'annuaire.
+
 * transfer <pubkey> <value>: Transfère la somme <value> à <pubkey>.
+La <pubkey> peut être une entrée de l'annuaire ou une clé publique complète.
 Note: Mettre à jour les UTXO avant et après le transfert.
 
 * sync_block: Met à jour la blockchain du porte-feuille.
@@ -90,6 +94,14 @@ while True:
         print("SYNC")
         wallet.update_balance()
 
+    elif "register" == cmd[0] and (len(cmd) == 1 or len(cmd) == 3):
+        if len(cmd) == 1:
+            for name in wallet.addr:
+                print(f"{name} = {wallet.addr[name][0:64]}")
+        else:
+            print(f"{cmd[1]} = {cmd[2][0:64]}")
+            wallet.register(cmd[1], cmd[2])
+
     elif "transfer" == cmd[0] and (len(cmd) == 1 or len(cmd) == 3):
         # Transaction vide
         if len(cmd) == 1:
@@ -112,13 +124,13 @@ while True:
 
     elif "get_proof" == cmd[0] and len(cmd) <= 2:
         if len(cmd) == 1:
-            for txid in wallet.proof_tx.keys(): print(txid)
+            for txid in wallet.proof_tx: print(txid)
         else:
             print("SYNC")
             wallet.get_proof(cmd[1])
 
     elif "verify_proof" == cmd[0] and len(cmd) <= 2:
-        for txid in ([cmd[1]] if len(cmd) == 2 else wallet.proof_tx.keys()):
+        for txid in ([cmd[1]] if len(cmd) == 2 else wallet.proof_tx):
             if wallet.verify_proof(txid):
                 print(f"SUCCESS {txid}")
             else:
