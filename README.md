@@ -1,6 +1,10 @@
 # Introduction
-Projet de création d'une blockchain bitcoin locale simplifiée
+Projet universitaire de création d'une blockchain bitcoin locale simplifiée
 basée sur une architecture pair à pair construite manuellement.
+
+* **Étudiant**: Maxime Vincent
+* **Formation**: Master 2 [ISD](https://www.universite-paris-saclay.fr/formation/master/informatique/m2-data-science-alternance) Univeristé Paris-Saclay
+* **Enseignant**: [Sylvain Conchon](https://www.lri.fr/~conchon/blockchain/)
 
 # Architecture
 La classe **Node** est la classe bas niveau du réseau pair à pair.
@@ -17,6 +21,7 @@ stocke le registre des blocs et le met à jour.
 Permet la connexion dynamique de nouveaux nœuds sur le réseau.
 * **LIST_BLOCKS**: Réponse privée suite à une demande GET_BLOCKS.
 * **GET_BALANCE**: Demande privée d'un porte-feuille des UTXO concernant son adresse.
+* **GET_PROOF**: Demande privée d'un porte-feuille de preuve d'une transaction.
 
 La classe **Miner** étend les fonctionnalités de la classe FullNode en ajoutant
 la possibilité de miner des blocs. Le mineur est capable de démarrer dynamiquement
@@ -28,9 +33,13 @@ la récompense de minage sous forme d'une UTXO incluse directement dans le bloc 
 La classe **Wallet** représente le porte-feuille. Il est connecté à un seul FullNode.
 Il stocke le couple (clé privée, clé publique) de l'utilisateur.
 Il lui permet d'envoyer des transactions et de consulter le solde associé à son adresse.
+Il peut également vérifier que des transactions sont incluses dans la blockchain.
 * **TRANSACT**: Envoi d'une transaction à diffuser sur le réseau.
 * **GET_BALANCE**: Demande privée du solde associé à l'adresse du porte-feuille.
 * **BALANCE**: Liste des UTXO envoyées par le nœud en réponse de GET_BALANCE.
+* **GET_BLOCKS**: Synchronisation des en-têtes de bloc.
+* **GET_PROOF**: Demande de preuve d'une transaction au nœud.
+* **PROOF**: Preuve de transaction en réponse de GET_PROOF.
 ![Architecture](./archi.jpg)
 
 # Spécificités de l'implémentation
@@ -154,6 +163,8 @@ optional arguments:
                         Niveau de verbosité entre 0 et 2.
 ```
 
+Les mineurs d'un même réseau doivent tous être configurés avec la même **difficulty**
+et le même **block-size**.
 ```shell
 python cli/miner.py --help
 ```
@@ -183,6 +194,9 @@ optional arguments:
   -v VERBOSE, --verbose VERBOSE
                         Niveau de verbosité entre 0 et 2.
 ```
+
+Pour faire fonctionner ces programmes sur un réseau local de plusieurs machines
+il faut choisir l'adresse **0.0.0.0** pour l'argument **--listen-host**.
 
 # Exemple d'utilisation
 On peut créer un nouveau porte-feuille de la manière suivante.
@@ -234,8 +248,23 @@ Tapez help pour voir la liste des commandes.
 * get_balance: Affiche le solde du porte-feuille.
 Note: Mettre à jour les UTXO au préalable.
 
+* register <name> <pubkey>: Enregistrement d'une clé publique dans l'annuaire.
+Si aucun argument renseigné affiche l'annuaire.
+
 * transfer <pubkey> <value>: Transfère la somme <value> à <pubkey>.
+La <pubkey> peut être une entrée de l'annuaire ou une clé publique complète.
 Note: Mettre à jour les UTXO avant et après le transfert.
+
+* sync_block: Met à jour la blockchain du porte-feuille.
+
+* block_count: Donne le nombre de blocs connus par le porte-feuille.
+
+* get_proof <txid>: Demande la preuve d'une transaction.
+Si <txid> n'est pas renseigné renvoie la liste des preuves reçues.
+
+* verify_proof <txid>: Vérifie la preuve d'une transaction.
+Si <txid> n'est pas renseigné vérifie toutes les preuves reçues.
+Note: Mettre à jour la blockchain et demander la preuve au préalable.
 
 * exit: Quitte le porte-feuille.
 ```
@@ -253,9 +282,9 @@ SYNC
 Pour créer le premier bloc il faut commencer par envoyer 2 transactions vides.
 ```
 > transfer
-SUCCESS
+TXID: 337cc2a275156e9b10f2dc00966b1ada5053e38200b661d374bf65262e2a7313
 > transfer
-SUCCESS
+TXID: 474c4aebeb5d35a1c0cb767119d8d6d47d15778ad699878053ae008ec5067a50
 ```
 
 Une fois que l'un des nœuds a miné le bloc genesis on constate que Alice a 50 BTC.
@@ -279,8 +308,9 @@ temporairement car le solde indiqué est nul alors qu'en réalité il nous reste
 > update_balance
 SYNC
 > transfer BQfcHxQKFtMcdUYkvCe4bGZfDgcKVLCyGZfDaFGRSWG11zSMLv9jcPaNEMKUq47HD51F7QzjjrVHi79RZ6D9zSVnT7mVWSSAQ6bXtVGQ4MaYuWrXc2ECgcVgcQytkPs2SkTnSx5po3YybGvRQzSbLcn2Zw6PxjtWZMUYwGPUaNSVYrmaXKeMLgdfA4FrDYHkYJgErAfCkJ9FbMN6ov4UtdfxoGNN6pZDfgh26TPLu5eCj6rBMm8rSwqkyzYBrndC8Nt9iLkwh9VoHRg34Y2cr7DB4fJVMvm29L2X2ETo7ZYipv7LwNg6j6t2smhh7t56WdcPcs2KbHuzhPk2DaFzZWE8BkN7PQeQqA27swWd5frVeuaBj13nvTLuafjhFUGENH2aDZsHGGNvVZdanaRDp3Kju53KTswPDoYRd8bAaJiZE9jQYhqjTScVc3wfRtRMJnVsFUsWLEBpBFkXRLoNPeQdwNy4HD7NrTZGaWBSvknHXaQP9ZSzqsY2Wkb8VMY7uFyjLVeD3u7AA5eZ8gBBoXe7tbwvwkbrwn7kPkdAoiuAroVwGmmVQo4oujpkyR8UMsXbimXT2XSVQXPmXu1sL2KKTs6YM 10
-SUCCESS
+TXID: 474c4aebeb5d35a1c0cb767119d8d6d47d15778ad699878053ae008ec5067a50
 > transfer
+TXID: 337cc2a275156e9b10f2dc00966b1ada5053e38200b661d374bf65262e2a7313
 > update_balance
 SYNC
 > get_balance
@@ -288,6 +318,13 @@ SYNC
 ```
 Alice a maintenant 90 BTC car elle a gagné 50 BTC de récompense lors du minage
 du 2ème bloc.
+
+Notez qu'il est possible d'enregistrer la clé publique de Bob pour alléger
+la commande de transfert.
+```
+> register Bob BQfcHxQKFtMcdUYkvCe4bGZfDgcKVLCyGZfDaFGRSWG11zSMLv9jcPaNEMKUq47HD51F7QzjjrVHi79RZ6D9zSVnT7mVWSSAQ6bXtVGQ4MaYuWrXc2ECgcVgcQytkPs2SkTnSx5po3YybGvRQzSbLcn2Zw6PxjtWZMUYwGPUaNSVYrmaXKeMLgdfA4FrDYHkYJgErAfCkJ9FbMN6ov4UtdfxoGNN6pZDfgh26TPLu5eCj6rBMm8rSwqkyzYBrndC8Nt9iLkwh9VoHRg34Y2cr7DB4fJVMvm29L2X2ETo7ZYipv7LwNg6j6t2smhh7t56WdcPcs2KbHuzhPk2DaFzZWE8BkN7PQeQqA27swWd5frVeuaBj13nvTLuafjhFUGENH2aDZsHGGNvVZdanaRDp3Kju53KTswPDoYRd8bAaJiZE9jQYhqjTScVc3wfRtRMJnVsFUsWLEBpBFkXRLoNPeQdwNy4HD7NrTZGaWBSvknHXaQP9ZSzqsY2Wkb8VMY7uFyjLVeD3u7AA5eZ8gBBoXe7tbwvwkbrwn7kPkdAoiuAroVwGmmVQo4oujpkyR8UMsXbimXT2XSVQXPmXu1sL2KKTs6YM
+Bob = BQfcHxQKFtMcdUYkvCe4bGZfDgcKVLCyGZfDaFGRSWG11zSMLv9jcPaNEMKUq47H
+```
 
 ```shell
 rlwrap python cli/wallet.py -w wallets/bob.bin -lp 8003 -rp 8002
@@ -309,4 +346,32 @@ SYNC
 ```
 
 # Arbres de Merkle
-TODO
+Les arbres de Merkle sont utilisés afin de réduire le stockage de la blockchain
+pour le porte-feuille. Il peut se contenter de stocker uniquement les en-têtes
+de bloc. En effet, ce sont les transactions qui représentent la majeure partie
+du poids d'un bloc. Le porte-feuille reste capable de vérifier que les transactions
+qu'il a soumises ont été validées et ajoutées à la blockchain.
+
+Dans mon implémentation, le porte-feuille est un client léger qui fait confiance
+au nœud auquel il se connecte. Il télécharge donc la blockchain sans la vérifier.
+Le porte-feuille peut demander une preuve au nœud que sa transaction est dans
+la blockchain. Cette preuve est une liste de hashs. Le porte-feuille peut ensuite
+vérifier que sa transaction est dans le bloc dont on lui fournit la position
+en utilisant cette preuve et la racine de l'arbre de Merkle présente dans l'en-tête
+du bloc correspondant.
+
+La logique de construction d'un arbre de Merkle et de vérification d'un hash
+est implémentée dans la classe **MerkleTree**. Elle est indépendante du reste
+des autres classes. Les classes **Wallet**, **FullNode** et **Miner** l'utilisent.
+
+Voici un exemple montrant comment Alice peut vérifier sa transaction.
+```
+> transfer
+TXID: 337cc2a275156e9b10f2dc00966b1ada5053e38200b661d374bf65262e2a7313
+> sync_block
+SYNC
+> get_proof 337cc2a275156e9b10f2dc00966b1ada5053e38200b661d374bf65262e2a7313
+SYNC
+> verify_proof 337cc2a275156e9b10f2dc00966b1ada5053e38200b661d374bf65262e2a7313
+SUCCESS 337cc2a275156e9b10f2dc00966b1ada5053e38200b661d374bf65262e2a7313
+```
