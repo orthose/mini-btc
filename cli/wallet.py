@@ -14,6 +14,17 @@ Note: Mettre à jour les UTXO au préalable.
 * transfer <pubkey> <value>: Transfère la somme <value> à <pubkey>.
 Note: Mettre à jour les UTXO avant et après le transfert.
 
+* sync_block: Met à jour la blockchain du porte-feuille.
+
+* block_count: Donne le nombre de blocs connus par le porte-feuille.
+
+* get_proof <txid>: Demande la preuve d'une transaction.
+Si <txid> n'est pas renseigné renvoie la liste des preuves reçues.
+
+* verify_proof <txid>: Vérifie la preuve d'une transaction.
+Si <txid> n'est pas renseigné vérifie toutes les preuves reçues.
+Note: Mettre à jour la blockchain et demander la preuve au préalable.
+
 * exit: Quitte le porte-feuille.
 """
 
@@ -72,27 +83,48 @@ while True:
     elif "help" == cmd[0] and len(cmd) == 1:
         print(help)
 
-    elif "get_balance" == cmd[0]:
+    elif "get_balance" == cmd[0] and len(cmd) == 1:
         print(f"{wallet.get_balance()} BTC")
 
-    elif "update_balance" == cmd[0]:
+    elif "update_balance" == cmd[0] and len(cmd) == 1:
         print("SYNC")
         wallet.update_balance()
 
     elif "transfer" == cmd[0] and (len(cmd) == 1 or len(cmd) == 3):
         # Transaction vide
         if len(cmd) == 1:
-            success = wallet.empty_transfer()
+            txid = wallet.empty_transfer()
         # Transaction classique
         else:
-            success = wallet.transfer(dest_pubkey=cmd[1], value=int(cmd[2]))
+            txid = wallet.transfer(dest_pubkey=cmd[1], value=int(cmd[2]))
 
-        if success:
-            print("SUCCESS")
+        if txid is not None:
+            print(f"TXID: {txid}")
         else:
             print("FAILURE")
 
-    elif "exit" == cmd[0]:
+    elif "sync_block" == cmd[0] and len(cmd) == 1:
+        print("SYNC")
+        wallet.sync_block()
+
+    elif "block_count" == cmd[0] and len(cmd) == 1:
+        print(len(wallet.ledger))
+
+    elif "get_proof" == cmd[0] and len(cmd) <= 2:
+        if len(cmd) == 1:
+            for txid in wallet.proof_tx.keys(): print(txid)
+        else:
+            print("SYNC")
+            wallet.get_proof(cmd[1])
+
+    elif "verify_proof" == cmd[0] and len(cmd) <= 2:
+        for txid in ([cmd[1]] if len(cmd) == 2 else wallet.proof_tx.keys()):
+            if wallet.verify_proof(txid):
+                print(f"SUCCESS {txid}")
+            else:
+                print(f"FAILURE {txid}")
+
+    elif "exit" == cmd[0] and len(cmd) == 1:
         wallet.shutdown(); break
 
     # Commande invalide
