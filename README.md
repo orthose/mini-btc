@@ -196,7 +196,20 @@ optional arguments:
 ```
 
 Pour faire fonctionner ces programmes sur un réseau local de plusieurs machines
-il faut choisir l'adresse **0.0.0.0** pour l'argument **--listen-host**.
+il faut renseigner les adresses réelles des machines.
+Par exemple j'ai 2 machines ayant les adresses **192.168.1.28** et **192.168.1.14**.
+
+Je lance un mineur sur la machine ayant l'adresse **192.168.1.28**
+en renseignant les options `-lh 192.168.1.28 -lp 8001`.
+Je lance un porte-feuille sur cette même machine en spécifiant les options
+`-lh localhost -lp 8000 -rh 192.168.1.28 -rp 8001`
+
+Je lance un mineur sur la machine ayant l'adresse **192.168.1.14** avec les options
+`-lh 192.168.1.14 -lp 8001 -rh 192.168.1.28 -rp 8001`.
+Ici les ports utilisés peuvent être identiques car ce sont 2 machines différentes.
+
+Il peut être éventuellement nécessaire d'ouvrir le port du mineur en configurant
+le pare-feu.
 
 # Exemple d'utilisation
 On peut créer un nouveau porte-feuille de la manière suivante.
