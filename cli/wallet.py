@@ -20,7 +20,9 @@ Note: Mettre à jour les UTXO avant et après le transfert.
 
 * sync_block: Met à jour la blockchain du porte-feuille.
 
-* block_count: Donne le nombre de blocs connus par le porte-feuille.
+* count_block: Donne le nombre de blocs connus par le porte-feuille.
+
+* show_block <index>: Affiche l'en-tête du bloc en position <index>.
 
 * get_proof <txid>: Demande la preuve d'une transaction.
 Si <txid> n'est pas renseigné renvoie la liste des preuves reçues.
@@ -97,9 +99,9 @@ while True:
     elif "register" == cmd[0] and (len(cmd) == 1 or len(cmd) == 3):
         if len(cmd) == 1:
             for name in wallet.addr:
-                print(f"{name} = {wallet.addr[name][0:64]}")
+                print(f"{name}: {wallet.addr[name][0:64]}")
         else:
-            print(f"{cmd[1]} = {cmd[2][0:64]}")
+            print(f"{cmd[1]}: {cmd[2][0:64]}")
             wallet.register(cmd[1], cmd[2])
 
     elif "transfer" == cmd[0] and (len(cmd) == 1 or len(cmd) == 3):
@@ -119,8 +121,15 @@ while True:
         print("SYNC")
         wallet.sync_block()
 
-    elif "block_count" == cmd[0] and len(cmd) == 1:
+    elif "count_block" == cmd[0] and len(cmd) == 1:
         print(len(wallet.ledger))
+
+    elif "show_block" == cmd[0] and len(cmd) == 2:
+        index = int(cmd[1])
+        if 0 <= index < len(wallet.ledger):
+            print(wallet.ledger[index])
+        else:
+            print("FAILURE")
 
     elif "get_proof" == cmd[0] and len(cmd) <= 2:
         if len(cmd) == 1:

@@ -257,7 +257,9 @@ Note: Mettre à jour les UTXO avant et après le transfert.
 
 * sync_block: Met à jour la blockchain du porte-feuille.
 
-* block_count: Donne le nombre de blocs connus par le porte-feuille.
+* count_block: Donne le nombre de blocs connus par le porte-feuille.
+
+* show_block <index>: Affiche l'en-tête du bloc en position <index>.
 
 * get_proof <txid>: Demande la preuve d'une transaction.
 Si <txid> n'est pas renseigné renvoie la liste des preuves reçues.
